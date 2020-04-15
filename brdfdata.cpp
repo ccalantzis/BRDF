@@ -19,7 +19,7 @@ bool CBRDFdata::LoadImages()
 	m_images.clear();
 	for(int i=0; i<m_numImages; i++)
 	{
-		string path = "img\\";
+		string path = "img/";
 		char num[4];
 		snprintf(num, sizeof(num), "%d", i+1);
 		string extension = ".png";
@@ -39,7 +39,6 @@ bool CBRDFdata::LoadImages()
 
 		m_images.push_back(newImg);
 	}
-
 	return true;
 }
 
@@ -55,6 +54,7 @@ void CBRDFdata::PrintImages()
 		name += num;
 		cv::namedWindow(name.c_str(), CV_WINDOW_AUTOSIZE);
 		cv::imshow(name.c_str(), cv::cvarrToMat(*it));
+		cv::waitKey(0);
     }
 }
 
@@ -107,7 +107,8 @@ void CBRDFdata::PrintNormalisedImages()
 		name += num;
 		cv::namedWindow(name.c_str(), CV_WINDOW_AUTOSIZE);
 		cv::imshow(name.c_str(), cv::cvarrToMat(*it));
-    }
+		cv::waitKey(0);
+	}
 }
 
 bool CBRDFdata::LoadDarkImage()
