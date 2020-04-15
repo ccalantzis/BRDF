@@ -67,7 +67,7 @@ ADD_LIBRARY(levmar STATIC
 
 # demo program
 IF(BUILD_DEMO)
-  SET(LIBS levmar)
+  SET(LIBS levmar m)
 
   LINK_DIRECTORIES(${CMAKE_BINARY_DIR}) # location of the levmar library
   LINK_DIRECTORIES(${LAPACKBLAS_DIR})
