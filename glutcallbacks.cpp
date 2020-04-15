@@ -4,17 +4,23 @@
 // Description : Rendering Engine
 //============================================================================
 
+#if defined(_MSC_VER)
 #include "stdafx.h"
+#endif
 #pragma once
-#include "glutcallbacks.h"
 #include <iostream>
 #include <stdio.h>
-#include "glut.h"
 #include <math.h>
-#include "brdfdata.h"
-#include <gl\GL.h>
-#include "glext.h"
 #include <fstream>
+
+#include "brdfdata.h"
+#include "glutcallbacks.h"
+
+extern "C" {
+#include "glut.h"
+#include <GL/gl.h>
+#include <GL/glx.h>
+}
 
 extern CBRDFdata m_brdf;
 extern int m_width;
@@ -83,6 +89,18 @@ PFNGLGETOBJECTPARAMETERIVARBPROC	glGetObjectParameterivARB;
 PFNGLUNIFORM3FPROC					glUniform3f;
 PFNGLUNIFORM1FPROC					glUniform1f;
 
+#if defined(CLOCK_MONOTONIC)
+// From https://stackoverflow.com/questions/13542165/c-linux-tickcount
+static uint32_t GetTickCount()
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return (uint32_t)(ts.tv_nsec / 1000000) + ((uint64_t)ts.tv_sec * 1000ull);
+}
+#endif
+
 char* GetShaderSource(char* filename)
 {
 	char* charbuffer = NULL;
@@ -132,6 +150,10 @@ void InitShader()
 	my_fragment_shader_source = GetShaderSource("fragmentShader.sl");
 	//my_vertex_shader_source = GetShaderSource("vertexShader.sl");
 
+#if !defined(_WIN_VER)
+#define wglGetProcAddress(name) glXGetProcAddress((GLubyte *)name)
+#endif
+
 	glCreateProgramObjectARB = (PFNGLCREATEPROGRAMOBJECTARBPROC)wglGetProcAddress("glCreateProgramObjectARB");
 	glCreateShaderObjectARB = (PFNGLCREATESHADEROBJECTARBPROC)wglGetProcAddress("glCreateShaderObjectARB");
 	glShaderSourceARB = (PFNGLSHADERSOURCEARBPROC)wglGetProcAddress("glShaderSourceARB");
@@ -146,7 +168,7 @@ void InitShader()
 	glGetObjectParameterivARB = (PFNGLGETOBJECTPARAMETERIVARBPROC)wglGetProcAddress("glGetObjectParameterivARB");
 	glUniform3f = (PFNGLUNIFORM3FPROC)wglGetProcAddress("glUniform3f");
 	glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
- 
+
 	// Create Shader And Program Objects
 	my_program = glCreateProgramObjectARB();
 	my_fragment_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
@@ -497,32 +519,32 @@ void DrawOnScreenDisplay()
 
 	std::string fps = "fps: ";
 	char* fpsNum = new char[10];
-	itoa(m_fps, fpsNum, 10);
+	snprintf(fpsNum, 10, "%d", (int)m_fps);
 	fps += fpsNum;
 
 	std::string fov = "fovH: ";
 	char* fovNum = new char[10];
-	itoa(m_glFov, fovNum, 10);
+	snprintf(fovNum, 10, "%d", (int)m_glFov);
 	fov += fovNum;
 
 	std::string fovV = "fovV: ";
 	char* fovNumV = new char[10];
-	itoa(m_glFovV, fovNumV, 10);
+	snprintf(fovNumV, 10, "%d", (int)m_glFovV);
 	fovV += fovNumV;
 
 	std::string eyeX = "eyeX: ";
 	char* eyeXStr = new char[10];
-	itoa(m_eyeX, eyeXStr, 10);
+	snprintf(eyeXStr, 10, "%d", (int)m_eyeX);
 	eyeX += eyeXStr;
 
 	std::string eyeY = "eyeY: ";
 	char* eyeYStr = new char[10];
-	itoa(m_eyeY, eyeYStr, 10);
+	snprintf(eyeYStr, 10, "%d", (int)m_eyeY);
 	eyeY += eyeYStr;
 
 	std::string eyeZ = "eyeZ: ";
 	char* eyeZStr = new char[10];
-	itoa(m_eyeZ, eyeZStr, 10);
+	snprintf(eyeZStr, 10, "%d", (int)m_eyeZ);
 	eyeZ += eyeZStr;
 
 	std::string esc = "esc: exit";
@@ -588,7 +610,7 @@ void DrawOnScreenDisplay()
 	delete eyeZStr;
 }
 
-void CalculateFrameRate(DWORD newVal)
+void CalculateFrameRate(uint32_t newVal)
 {
 	m_frameCounter[m_frame] = newVal;
 	m_frame++;
@@ -644,7 +666,7 @@ void DrawMapping()
 }
 
 // display callback for GLUT
-void Display(void)
+void Display_(void)
 {
 	// clear color and depth buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -730,7 +752,7 @@ void Reshape(int w, int h)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-	Display();
+    Display_();
 }
 
 // keyboard callback
@@ -851,8 +873,8 @@ void Mouse(int btn, int state, int x, int y)
 // register callbacks with GLUT
 void RegisterCallbacks(void)
 {
-    glutDisplayFunc(Display);
-	glutIdleFunc(Display);
+    glutDisplayFunc(Display_);
+    glutIdleFunc(Display_);
     glutKeyboardFunc(Keyboard);
     glutReshapeFunc(Reshape);
     glutMotionFunc(MouseMotion);

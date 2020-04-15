@@ -4,13 +4,15 @@
 // Description : contains functions for the CBRDFdata class
 //============================================================================
 
+#if defined(_MSC_VER)
 #include "stdafx.h"
+#endif
 #include "brdfdata.h"
 #include "highgui.h"
 #include <iostream>
 #include <fstream>
 #include "glut.h"
-#include "levmar\levmar.h"
+#include "levmar/levmar.h"
 
 bool CBRDFdata::LoadImages()
 {
@@ -19,7 +21,7 @@ bool CBRDFdata::LoadImages()
 	{
 		string path = "img\\";
 		char num[4];
-		itoa(i+1, num, 10);
+		snprintf(num, sizeof(num), "%d", i+1);
 		string extension = ".png";
 		
 		path += num;
@@ -49,10 +51,10 @@ void CBRDFdata::PrintImages()
 	{
 		string name = "image: ";
 		char num[4];
-		itoa(i+1, num, 10);
+		snprintf(num, sizeof(num), "%d", i+1);
 		name += num;
 		cv::namedWindow(name.c_str(), CV_WINDOW_AUTOSIZE);
-		cv::imshow(name.c_str(), (*it));
+		cv::imshow(name.c_str(), cv::cvarrToMat(*it));
     }
 }
 
@@ -101,10 +103,10 @@ void CBRDFdata::PrintNormalisedImages()
 	{
 		string name = "normed image: ";
 		char num[4];
-		itoa(i+1, num, 10);
+		snprintf(num, sizeof(num)," %d", i+1);
 		name += num;
 		cv::namedWindow(name.c_str(), CV_WINDOW_AUTOSIZE);
-		cv::imshow(name.c_str(), (*it));
+		cv::imshow(name.c_str(), cv::cvarrToMat(*it));
     }
 }
 

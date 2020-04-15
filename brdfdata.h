@@ -6,6 +6,8 @@
 
 #include "cv.h"
 
+using namespace std;
+
 struct vertex
 {
 	double m_x;

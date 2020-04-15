@@ -4,13 +4,15 @@
 // Description : BRDF Calculation for Rapid Prototyping Project at TU-Berlin
 //============================================================================
 
+#if defined(_MSC_VER)
 #include "stdafx.h"
+#endif
 #include <iostream>
 #include <fstream>
 #include "cv.h"
 #include "highgui.h"
 #include "brdfdata.h"
-#include <gl\GL.h> //do we really need that or just glut?
+#include <GL/gl.h> //do we really need that or just glut?
 #include "glut.h"
 #include "glutcallbacks.h"
 

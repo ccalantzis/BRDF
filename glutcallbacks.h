@@ -9,7 +9,7 @@
                                          
 void Init(void);
 void RegisterCallbacks(void);
-void Display(void);
+void Display_(void);
 void Reshape(int width, int height);
 void Idle(void);
 void Mouse(int btn, int state, int x, int y);
