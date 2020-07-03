@@ -426,62 +426,6 @@ void CBRDFdata::CalcFaceNormals()
 		cout << "Error in: CalcFaceNormals()" << endl;
 }
 
-void CBRDFdata::WriteFaces(vector<char*>* linesInFile)
-{
-	
-	std::vector<char*>::iterator it;
-	for(it = linesInFile->begin(); it != linesInFile->end() && (*it != NULL); it++)
-	{
-		if((*it)[0] == 'f')
-			break;
-	}
-
-	int i=0;
-
-	while((*it)[0] == 'f')
-	{
-		int startpos = 2;
-		int pos = 2;
-		int coordcount = 0;
-		bool wait_for_next = false;
-
-		char* currLine = (*it);
-		char* currNumber[3];
-		
-		//search for spaces
-		for (; ; pos++)
-		{
-			if (currLine[pos] != ' ' && currLine[pos] != '/' && currLine[pos] != '\0') continue;
-
-			if (currLine[pos] == ' ')
-			{
-				wait_for_next = false;
-				startpos = pos + 1;
-				continue;
-			}
-
-			if (currLine[pos] == '\0') break;
-			if (wait_for_next) continue;
-
-			currNumber[coordcount] = new char[100];
-			strncpy(currNumber[coordcount], currLine+startpos, pos-startpos);
-			currNumber[coordcount][pos-startpos] = '\0';
-			coordcount++;
-
-			startpos = pos + 1;
-
-			if (currLine[pos] == '/') wait_for_next = true;
-		}
-
-		m_faces[i].m_point[0] = m_vertices[atoi(currNumber[0])-1];
-		m_faces[i].m_point[1] = m_vertices[atoi(currNumber[1])-1];
-		m_faces[i].m_point[2] = m_vertices[atoi(currNumber[2])-1];
-
-		it++;
-		i++;
-	}	
-}
-
 int CBRDFdata::GetNumFaces(vector<char*>* linesInFile)
 {
 	int numFaces = 0;
@@ -514,50 +458,6 @@ int CBRDFdata::GetNumFaces(vector<char*>* linesInFile)
 	}
 
 	return numFaces;
-}
-
-void CBRDFdata::WriteVertices(vector<char*>* linesInFile)
-{
-	std::vector<char*>::iterator it;
-	for(it = linesInFile->begin(); it != linesInFile->end() && (*it != NULL); it++)
-	{
-		if((*it)[0] == 'v')
-			break;
-	}
-
-	int i=0;
-
-	while((*it)[0] == 'v')
-	{
-		int startpos = 2;
-		int pos = 2;
-		int coordcount = 0;
-
-		char* currLine = (*it);
-		char* currNumber[3];
-		
-		//search for spaces
-		for (; ; pos++)
-		{
-			if (currLine[pos] != ' ' && currLine[pos] != '\0') continue;
-
-			currNumber[coordcount] = new char[100];
-			strncpy(currNumber[coordcount], currLine+startpos, pos-startpos);
-			currNumber[coordcount][pos-startpos] = '\0';
-			coordcount++;
-
-			startpos = pos + 1;
-
-			if (currLine[pos] == '\0') break;
-		}
-
-		m_vertices[i].m_x = atof(currNumber[0]);
-		m_vertices[i].m_y = atof(currNumber[1]);
-		m_vertices[i].m_z = atof(currNumber[2]);
-
-		it++;
-		i++;
-	}
 }
 
 int CBRDFdata::GetNumVertices(vector<char*>* linesInFile)

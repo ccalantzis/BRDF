@@ -101,53 +101,69 @@ static uint32_t GetTickCount()
 }
 #endif
 
-char* GetShaderSource(char* filename)
-{
-	char* charbuffer = NULL;
-	vector<char> buffer;
-	buffer.clear();
+//char* GetShaderSource(char* filename)
+//{
+//	char* charbuffer = NULL;
+//	vector<char> buffer;
+//	buffer.clear();
 
-	std::ifstream file;
-	file.open(filename, std::ios::in | std::ios::binary);
+//	std::ifstream file;
+//	file.open(filename, std::ios::in | std::ios::binary);
 
-	if(!file.fail())
-	{ 
-		while(!file.eof())
-		{
-			char currChar = file.get();
-			buffer.push_back(currChar);
-		}
-		file.close();
-    }
+//	if(!file.fail())
+//	{
+//		while(!file.eof())
+//		{
+//			char currChar = file.get();
+//			buffer.push_back(currChar);
+//		}
+//		file.close();
+//    }
 
-	//dirty hack..
-	std::vector<char>::iterator it = buffer.begin();
-	buffer.erase(it);
-	it = buffer.begin();
-	buffer.erase(it);
-	it = buffer.begin();
-	buffer.erase(it);
+//	//dirty hack..
+//	std::vector<char>::iterator it = buffer.begin();
+//	buffer.erase(it);
+//	it = buffer.begin();
+//	buffer.erase(it);
+//	it = buffer.begin();
+//	buffer.erase(it);
 
-	charbuffer = new char[buffer.size()];
-	for(int i=0; i<buffer.size()-1; i++)
-	{
-		charbuffer[i] = buffer.at(i);
-	}
-	charbuffer[buffer.size()-1] = '\0';
+//	charbuffer = new char[buffer.size()];
+//	for(int i=0; i<buffer.size()-1; i++)
+//	{
+//		charbuffer[i] = buffer.at(i);
+//	}
+//	charbuffer[buffer.size()-1] = '\0';
 
-	buffer.clear();
+//	buffer.clear();
 
-	return charbuffer;
-}
+//	return charbuffer;
+//}
 
 void InitShader()
 {	
+    string line;
+    string file;
+
+    ifstream myfile ("fragmentShader.sl");
+
+    if (myfile.is_open())
+    {
+        while (! myfile.eof() )
+        {
+            getline (myfile,line);
+            file += line; // Concatenate every lines
+        }
+        myfile.close();
+    }
+
+    const char *my_fragment_shader_source = file.c_str();
 	//Init Shader
-	char* my_fragment_shader_source;
+//	char* my_fragment_shader_source;
 	//char* my_vertex_shader_source;
  
 	// Get Vertex And Fragment Shader Sources
-	my_fragment_shader_source = GetShaderSource("fragmentShader.sl");
+//	my_fragment_shader_source = GetShaderSource("fragmentShader.sl");
 	//my_vertex_shader_source = GetShaderSource("vertexShader.sl");
 
 #if !defined(_WIN_VER)
@@ -171,7 +187,7 @@ void InitShader()
 
 	// Create Shader And Program Objects
 	my_program = glCreateProgramObjectARB();
-	my_fragment_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+    my_fragment_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
  
 	// Load Shader Sources
 	glShaderSourceARB(my_fragment_shader, 1, (const GLcharARB**)&my_fragment_shader_source, NULL);
@@ -183,14 +199,6 @@ void InitShader()
 	glGetObjectParameterivARB(my_fragment_shader, GL_OBJECT_COMPILE_STATUS_ARB, &compiled);
 	int logLength = 0;
 	glGetObjectParameterivARB(my_fragment_shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &logLength);
-
-	//debug:
-	GLsizei charsWritten;
-	GLcharARB *infoLog = (GLcharARB *)malloc(logLength * sizeof(GLcharARB));
-	glGetInfoLogARB(my_fragment_shader, logLength, &charsWritten, infoLog);
-
-	if(charsWritten > 0)
-		cout << infoLog << endl;
 
 	// Attach The Shader Objects To The Program Object
 	glAttachObjectARB(my_program, my_fragment_shader);
@@ -210,13 +218,6 @@ void InitShader()
 	//glGetObjectParameterivARB(my_vertex_shader, GL_OBJECT_COMPILE_STATUS_ARB, &compiled);
 	//logLength = 0;
 	//glGetObjectParameterivARB(my_vertex_shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &logLength);
-
-	////debug:
-	//GLcharARB *infoLogV = (GLcharARB *)malloc(logLength * sizeof(GLcharARB));
-	//glGetInfoLogARB(my_vertex_shader, logLength, &charsWritten, infoLogV);
-
-	//if(charsWritten > 0)
-	//	cout << infoLogV << endl;
  
 	// Attach The Shader Objects To The Program Object	
 	glAttachObjectARB(my_program, my_vertex_shader);
@@ -224,7 +225,7 @@ void InitShader()
 	// Link The Program Object
 	glLinkProgramARB(my_program);
 
-	free(my_fragment_shader_source);
+    //free(my_fragment_shader_source);
 	//free(my_vertex_shader_source);
 }
 
@@ -582,14 +583,6 @@ void DrawOnScreenDisplay()
     DrawString(c, 10, m_height-10*i++, color_1, font);
 
     glPopMatrix();
-
-    //cleanup
-//	delete fpsNum;
-//	delete fovNum;
-//	delete fovNumV;
-//	delete eyeXStr;
-//	delete eyeYStr;
-//	delete eyeZStr;
 }
 
 void CalculateFrameRate(uint32_t newVal)
