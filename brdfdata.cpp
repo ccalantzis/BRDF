@@ -8,18 +8,32 @@
 #include "stdafx.h"
 #endif
 #include "brdfdata.h"
-#include "highgui.h"
 #include <iostream>
 #include <fstream>
 #include "glut.h"
 #include "levmar/levmar.h"
+#include <igl/readOBJ.h>
+#include <Eigen/Core>
+#include <igl/barycentric_coordinates.h>
+#include <fstream>
+#include <Eigen/Dense>
+#include <limits>
+#include <vector>
+#include <igl/point_mesh_squared_distance.h>
+#include <igl/voxel_grid.h>
+
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgcodecs/imgcodecs.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/core/mat.inl.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 bool CBRDFdata::LoadImages()
 {
 	m_images.clear();
 	for(int i=0; i<m_numImages; i++)
 	{
-		string path = "img/";
+        string path = "img/timber/";
 		char num[4];
 		snprintf(num, sizeof(num), "%d", i+1);
 		string extension = ".png";
@@ -27,14 +41,15 @@ bool CBRDFdata::LoadImages()
 		path += num;
 		path += extension;
 
-		IplImage* newImg = cvLoadImage(path.c_str(), CV_LOAD_IMAGE_COLOR);
-		if(newImg == NULL)
+        //IplImage* newImg = cvLoadImage(path.c_str(), CV_LOAD_IMAGE_COLOR);
+        cv::Mat newImg = cv::imread(path);
+        if(newImg.empty())
 			return false;
 
 		if(m_width <= -1 || m_height <= -1)
 		{
-			m_width = newImg->width;
-			m_height = newImg->height;
+            m_width = newImg.size().width;
+            m_height = newImg.size().height;
 		}
 
 		m_images.push_back(newImg);
@@ -46,82 +61,82 @@ bool CBRDFdata::LoadImages()
 void CBRDFdata::PrintImages()
 {
 	int i=0;
-	for(vector<IplImage*>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
-	{
+    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
+    {
 		string name = "image: ";
 		char num[4];
 		snprintf(num, sizeof(num), "%d", i+1);
 		name += num;
-		cv::namedWindow(name.c_str(), CV_WINDOW_AUTOSIZE);
-		cv::imshow(name.c_str(), cv::cvarrToMat(*it));
+        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
+        cv::imshow(name.c_str(), (*it));
 		cv::waitKey(0);
     }
 }
 
-//faulty
-void CBRDFdata::NormaliseImages()
-{
-	for(vector<IplImage*>::iterator it = m_images.begin(); it != m_images.end(); it++)
-	{
-		//find darkest pixel in channel
-		int min_r = 0, min_g = 0, min_b = 0;
+////faulty
+//void CBRDFdata::NormaliseImages()
+//{
+//	for(vector<IplImage*>::iterator it = m_images.begin(); it != m_images.end(); it++)
+//	{
+//		//find darkest pixel in channel
+//		int min_r = 0, min_g = 0, min_b = 0;
 		
-		for(int x = 0; x < (*it)->width; x++)
-			for(int y = 0; y < (*it)->height; y++)
-			{				
-				CvScalar pix = cvGet2D((*it), y, x);
-				if(pix.val[0] < min_r)
-					min_r = pix.val[0];
-				if(pix.val[1] < min_g)
-					min_g = pix.val[1];
-				if(pix.val[2] < min_b)
-					min_b = pix.val[2];
-			}
+//		for(int x = 0; x < (*it)->width; x++)
+//			for(int y = 0; y < (*it)->height; y++)
+//			{
+//				CvScalar pix = cvGet2D((*it), y, x);
+//				if(pix.val[0] < min_r)
+//					min_r = pix.val[0];
+//				if(pix.val[1] < min_g)
+//					min_g = pix.val[1];
+//				if(pix.val[2] < min_b)
+//					min_b = pix.val[2];
+//			}
 
 
-		//subtract darkest pixel from all pixels in image
-		CvScalar dark;		
-		dark.val[0] = min_r;
-		dark.val[1] = min_g;
-		dark.val[2] = min_b;
+//		//subtract darkest pixel from all pixels in image
+//		CvScalar dark;
+//		dark.val[0] = min_r;
+//		dark.val[1] = min_g;
+//		dark.val[2] = min_b;
 
-		IplImage* darkImage;
-		CvSize size;
-		size.height = (*it)->height;
-		size.width = (*it)->width;
-		darkImage = cvCreateImage(size, (*it)->depth, 3);
-		cvSet(darkImage, dark);
+//		IplImage* darkImage;
+//		CvSize size;
+//		size.height = (*it)->height;
+//		size.width = (*it)->width;
+//		darkImage = cvCreateImage(size, (*it)->depth, 3);
+//		cvSet(darkImage, dark);
 
-		cvSub((*it), darkImage, (*it));
-    }
-}
+//		cvSub((*it), darkImage, (*it));
+//    }
+//}
 
 void CBRDFdata::PrintNormalisedImages()
 {
 	int i=0;
-	for(vector<IplImage*>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
-	{
+    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
+    {
 		string name = "normed image: ";
 		char num[4];
 		snprintf(num, sizeof(num)," %d", i+1);
 		name += num;
-		cv::namedWindow(name.c_str(), CV_WINDOW_AUTOSIZE);
-		cv::imshow(name.c_str(), cv::cvarrToMat(*it));
+        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
+        cv::imshow(name.c_str(), (*it));
 		cv::waitKey(0);
 	}
 }
 
 bool CBRDFdata::LoadDarkImage()
 {
-	string path = "img\\";
+    string path = "img/";
 	string name = "dark";
 	string extension = ".png";
 		
 	path += name;
 	path += extension;
 
-	m_dark = cvLoadImage(path.c_str(), CV_LOAD_IMAGE_COLOR);
-	if(m_dark == NULL)
+    m_dark = cv::imread(path);
+    if(m_dark.dims == 0)
 		return false;
 
 	return true;
@@ -129,12 +144,12 @@ bool CBRDFdata::LoadDarkImage()
 
 void CBRDFdata::SubtractAmbientLight()
 {
-	if(m_dark == NULL)
+    if(m_dark.empty())
 		return;
 	
-	for(vector<IplImage*>::iterator it = m_images.begin(); it != m_images.end(); it++)
-	{
-		cvSub((*it), m_dark, (*it));
+    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
+    {
+        cv::subtract((*it), m_dark, (*it));
 	}
 }
 
@@ -183,10 +198,10 @@ void CBRDFdata::WriteValue(std::string parameter, std::string value)
 	double val = atof(value.c_str());
 
 	if(parameter == "cx")
-		cvSetReal1D(m_principal_point, 0, val);
+        m_principal_point.at<double>(0) = val;
 
 	if(parameter == "cy")
-		cvSetReal1D(m_principal_point, 1, val);
+        m_principal_point.at<double>(0) = val;
 
 	if(parameter == "f")
 		m_focalLength = val;
@@ -195,40 +210,40 @@ void CBRDFdata::WriteValue(std::string parameter, std::string value)
 		m_pixelSizeX = val;
 
 	if(parameter == "nx")
-		cvSetReal1D(m_n, 0, val);
+        m_n.at<double>(0) = val;
 
 	if(parameter == "ny")
-		cvSetReal1D(m_n, 1, val);
+        m_n.at<double>(1) = val;
 
 	if(parameter == "nz")
-		cvSetReal1D(m_n, 2, val);
+        m_n.at<double>(2) = val;
 
 	if(parameter == "ox")
-		cvSetReal1D(m_o, 0, val);
+        m_o.at<double>(0) = val;
 
 	if(parameter == "oy")
-		cvSetReal1D(m_o, 1, val);
+        m_o.at<double>(1) = val;
 
 	if(parameter == "oz")
-		cvSetReal1D(m_o, 2, val);
+        m_o.at<double>(2) = val;
 
 	if(parameter == "ax")
-		cvSetReal1D(m_a, 0, val);
+        m_a.at<double>(0) = val;
 
 	if(parameter == "ay")
-		cvSetReal1D(m_a, 1, val);
+        m_a.at<double>(1) = val;
 
 	if(parameter == "az")
-		cvSetReal1D(m_a, 2, val);
+        m_a.at<double>(2) = val;
 
 	if(parameter == "px")
-		cvSetReal1D(m_p, 0, val);
+        m_p.at<double>(0) = val;
 
 	if(parameter == "py")
-		cvSetReal1D(m_p, 1, val);
+        m_p.at<double>(1) = val;
 
 	if(parameter == "pz")
-		cvSetReal1D(m_p, 2, val);
+        m_p.at<double>(2) = val;
 
 }
 
@@ -343,13 +358,18 @@ void CBRDFdata::LoadModel(std::string filename)
 	vector<char*>* linesInFile = new vector<char*>;
 	ReadInFileAsLines(filename, linesInFile);
 
-	int numVertices = GetNumVertices(linesInFile);
+    Eigen::MatrixXi F;
+    Eigen::MatrixXd V;
+
+    igl::readOBJ(filename, V, F);
+
+    int numVertices = V.rows();
 
 	m_vertices = new vertex[numVertices];
 	
 	WriteVertices(linesInFile);
 
-	int num_faces = GetNumFaces(linesInFile);
+    int num_faces = F.rows();
 
 	m_faces = new triangle[num_faces];
 	m_faces[0].m_numFaces = num_faces;
@@ -358,7 +378,7 @@ void CBRDFdata::LoadModel(std::string filename)
 
 	CalcFaceNormals();
 
-	ScaleMesh();
+    ScaleMesh();
 }
 
 void CBRDFdata::CalcFaceNormals()
@@ -568,51 +588,51 @@ int CBRDFdata::GetNumVertices(vector<char*>* linesInFile)
 	return numVerts;
 }
 
-void CBRDFdata::SaveValuesToSurface(int currentSurface, CvMat* brdf, int colorChannel) //BGR
+void CBRDFdata::SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel) //BGR
 {
 	//saves the brdf information stored in brdf to the corresponding surface on the model
 	//attention: mind the color channel.. so we will need that information 3x at the surface..
 	//brdf matrix contains parameters: kd, ks and n - in that order
 
-	m_faces[currentSurface].brdf[colorChannel].kd = cvGetReal1D(brdf, 0);
-	m_faces[currentSurface].brdf[colorChannel].ks = cvGetReal1D(brdf, 1);
-	m_faces[currentSurface].brdf[colorChannel].n = cvGetReal1D(brdf, 2);
+    m_faces[currentSurface].brdf[colorChannel].kd = brdf.at<double>(0);
+    m_faces[currentSurface].brdf[colorChannel].ks = brdf.at<double>(1);
+    m_faces[currentSurface].brdf[colorChannel].n = brdf.at<double>(2);
 }
 
-CvMat* CBRDFdata::GetCameraOrigin()
+cv::Mat CBRDFdata::GetCameraOrigin()
 {
 	return m_p;
 }
 
-CvMat* CBRDFdata::GetA()
+cv::Mat CBRDFdata::GetA()
 {
 	return m_a;
 }
 
-CvMat* CBRDFdata::GetO()
+cv::Mat CBRDFdata::GetO()
 {
 	return m_o;
 }
 
-CvMat* CBRDFdata::GetN()
+cv::Mat CBRDFdata::GetN()
 {
 	return m_n;
 }
 
 double CBRDFdata::GetCX()
 {
-	return cvGetReal1D(m_principal_point, 0);
+    return m_principal_point.at<double>(0);
 }
 
 double CBRDFdata::GetCY()
 {
-	return cvGetReal1D(m_principal_point, 1);
+    return m_principal_point.at<double>(1);
 }
 
-CvMat* CBRDFdata::CalcPixel2SurfaceMapping()
+cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 {
-	CvMat* map = cvCreateMat(m_height, m_width, CV_32S);
-	cvSet(map, cvScalar(0.0));
+    cv::Mat map(m_height, m_width, CV_32S);
+    map = cv::Scalar(0.0);
 
 	//create map: pixel of image to surface on model(triangle?!) -> 0 means pixel not on model; val_x >0 means belongs to surface x
 	//return matrix has size of input image and contains zeros for all pixels that don't contain the object of interest, otherwise the number to
@@ -650,7 +670,7 @@ CvMat* CBRDFdata::CalcPixel2SurfaceMapping()
 		int errorValue = gluProject(objectX, objectY, objectZ, model_view, projection, viewport, &winX, &winY, &winZ);
 
 		if(winY >=0 && winX >=0)
-			cvSetReal2D(map, winY, winX, i);
+            map.at<int>(winY, winX) = i;
 	}
 
 	return map;
@@ -715,9 +735,9 @@ void CBRDFdata::InitLEDs()
 	//}
 }
 
-CvMat* CBRDFdata::GetCosRV(int currentSurface)
+cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 {
-	CvMat* theta = cvCreateMat(1, m_numImages, CV_32F);
+    cv::Mat theta(1, m_numImages, CV_32F);
 	//matrix theta contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
 	//TODO: check if the below code works!
@@ -740,9 +760,9 @@ CvMat* CBRDFdata::GetCosRV(int currentSurface)
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//observer vector
-		double Vx = cvGetReal1D(m_p, 0) - x;
-		double Vy = cvGetReal1D(m_p, 1) - y;
-		double Vz = cvGetReal1D(m_p, 2) - z;
+        double Vx = m_p.at<double>(0) - x;
+        double Vy = m_p.at<double>(1) - y;
+        double Vz = m_p.at<double>(2) - z;
 
 		double length = sqrt(Vx*Vx + Vy*Vy + Vz*Vz);
 
@@ -778,15 +798,15 @@ CvMat* CBRDFdata::GetCosRV(int currentSurface)
 		//it actually return cosTheta! but thats ok, we only need cosTheta!
 		double angle = Rx * Vx + Ry * Vy + Rz * Vz;
 		//double actualAngle = acos(angle)*180.0/CV_PI;
-		cvSetReal1D(theta, i, angle);
+        theta.at<double>(i) = angle;
 	}
 
 	return theta;
 }
 
-CvMat* CBRDFdata::GetCosLN(int currentSurface)
+cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 {
-	CvMat* phi = cvCreateMat(1, m_numImages, CV_32F);
+    cv::Mat phi(1, m_numImages, CV_32F);
 	//matrix phi contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
 	//TODO: check if the below code works!
@@ -823,16 +843,16 @@ CvMat* CBRDFdata::GetCosLN(int currentSurface)
 		//it actually return cosPhi! but thats ok, we only need cosPhi!
 		double angle = Lx * surface.m_normal.m_x + Ly * surface.m_normal.m_y + Lz * surface.m_normal.m_z;
 		//double actualAngle = acos(angle)*180.0/CV_PI;
-		cvSetReal1D(phi, i, angle);
+        phi.at<double>(i) = angle;
 	}
 
 	return phi;
 }
 
 //calcs the product of surface normal and H
-CvMat* CBRDFdata::GetCosNH(int currentSurface)
+cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 {
-	CvMat* theta_dash = cvCreateMat(1, m_numImages, CV_32F);
+    cv::Mat theta_dash(1, m_numImages, CV_32F);
 	//matrix theta_dash contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
 	for (int i = 0; i < m_numImages; i++)
@@ -854,9 +874,9 @@ CvMat* CBRDFdata::GetCosNH(int currentSurface)
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//|light vector + observer vector| = half vector
-		double Hx = m_led[i].m_x - 2*x + cvGetReal1D(m_p, 0);
-		double Hy = m_led[i].m_y - 2*y + cvGetReal1D(m_p, 1);
-		double Hz = m_led[i].m_z - 2*z + cvGetReal1D(m_p, 2);
+        double Hx = m_led[i].m_x - 2*x + m_p.at<double>(0);
+        double Hy = m_led[i].m_y - 2*y + m_p.at<double>(1);
+        double Hz = m_led[i].m_z - 2*z + m_p.at<double>(2);
 			
 		double length = sqrt(Hx*Hx + Hy*Hy + Hz*Hz);
 			
@@ -868,23 +888,23 @@ CvMat* CBRDFdata::GetCosNH(int currentSurface)
 		//it actually return cosTheta'! but thats ok, we only need cosTheta'!
 		double angle = Hx * surface.m_normal.m_x + Hy * surface.m_normal.m_y + Hz * surface.m_normal.m_z;
 		//double actualAngle = acos(angle)*180.0/CV_PI;
-		cvSetReal1D(theta_dash, i, angle);
+        theta_dash.at<double>(i) = angle;
 	}
 
 	return theta_dash;
 }
 
-CvMat* CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
+cv::Mat CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
 {
-	CvMat* I = cvCreateMat(1, m_numImages, CV_32F);
+    cv::Mat I = cv::Mat(1, m_numImages, CV_32F);
 	//matrix I contains image Intensities for iamge1 position 0 and intensity for image16 in position 15(m_numImages-1)
 	//this function just gets the values of one color channel!
 	int num = 0;
-	for(vector<IplImage*>::iterator it = m_images.begin(); it != m_images.end(); it++)
-	{
-		CvScalar i = cvGet2D((*it), (*it)->height-1-y, x); //because ogl screen y-coordinate is inverted!
+    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
+    {
+        cv::Scalar i = (*it).at<double>((*it).size().height-1-y, x); //because ogl screen y-coordinate is inverted!
 		double currIntensity = i.val[colorChannel]/255.0;
-		cvSetReal1D(I, num++, currIntensity);
+        I.at<double>(num++) = currIntensity;
 	}
 	return I;
 }
@@ -920,9 +940,9 @@ void BRDFFunc(double *p, double *x, int m, int n, void *data)
 	}	
 }
 
-CvMat* CBRDFdata::SolveEquation(CvMat* phi, CvMat* thetaDash, CvMat* theta, CvMat* I)
+cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, cv::Mat I)
 {
-	CvMat* brdf = cvCreateMat(1, 3, CV_32F);
+    cv::Mat brdf = cv::Mat(1, 3, CV_32F);
 	//solve equation I = kd*cos(phi) + ks*cos^n(phi) with 16 sets of values
 	//returns the resulting parameters kd, ks and n, in that order in brdf
 	//phi: contains 16 values
@@ -933,26 +953,26 @@ CvMat* CBRDFdata::SolveEquation(CvMat* phi, CvMat* thetaDash, CvMat* theta, CvMa
 	double* x = new double[m_numImages];
 	for(int i=0; i<m_numImages; i++)
 	{
-		x[i] = cvGetReal1D(I, i);
+        x[i] = I.at<double>(i);
 	}
 
 	extraData* data = new extraData();
 
-	data->angles = new double[phi->cols + thetaDash->cols + theta->cols];
+    data->angles = new double[phi.cols + thetaDash.cols + theta.cols];
 	int j = 0;
 	for(; j<m_numImages; j++)
 	{
-		data->angles[j] = cvGetReal1D(phi, j);
+        data->angles[j] = phi.at<double>(j);
 	}
 	
 	for(int a=0; j<m_numImages*2; j++, a++)
 	{
-		data->angles[j] = cvGetReal1D(thetaDash, a);
+        data->angles[j] = thetaDash.at<double>(a);
 	}
 
 	for(int a=0; j<m_numImages*3; j++, a++)
 	{
-		data->angles[j] = cvGetReal1D(theta, a);
+        data->angles[j] = theta.at<double>(a);
 	}
 	
 	data->modelInfo = m_model;
@@ -977,9 +997,9 @@ CvMat* CBRDFdata::SolveEquation(CvMat* phi, CvMat* thetaDash, CvMat* theta, CvMa
 //
 //#endif
 
-	cvSetReal1D(brdf, 0, p[0]);
-	cvSetReal1D(brdf, 1, p[1]);
-	cvSetReal1D(brdf, 2, p[2]);
+    brdf.at<double>(0) = p[0];
+    brdf.at<double>(1) = p[1];
+    brdf.at<double>(2) = p[2];
 
 	delete[] data->angles;
 	delete data;
@@ -987,7 +1007,7 @@ CvMat* CBRDFdata::SolveEquation(CvMat* phi, CvMat* thetaDash, CvMat* theta, CvMa
 	return brdf;
 }
 
-void CBRDFdata::CalcBRDFEquation(CvMat* pixelMap)
+void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 {
 	int shizzle = 0;
 	double min_kd = -100.0;
@@ -1007,42 +1027,42 @@ void CBRDFdata::CalcBRDFEquation(CvMat* pixelMap)
 	for(int x=0; x < m_width; x++)
 		for(int y=0; y < m_height; y++)
 		{
-			int currentSurface = cvGetReal2D(pixelMap, y, x);
+            int currentSurface = pixelMap.at<int>(y, x);
 
 			shizzle++;
 
 			if(currentSurface > 0) //pixel corresponds to a surface on the model
 			{				
-				CvMat* phi = GetCosLN(currentSurface);
-				CvMat* thetaDash = GetCosNH(currentSurface);
-				CvMat* theta = GetCosRV(currentSurface);
+                cv::Mat phi = GetCosLN(currentSurface);
+                cv::Mat thetaDash = GetCosNH(currentSurface);
+                cv::Mat theta = GetCosRV(currentSurface);
 
 				for(int colorChannel=0; colorChannel<3; colorChannel++) //do the calculation once for each color-channel
 				{
 					//build vector I
-					CvMat* I = GetIntensities(x, y, colorChannel); //BGR
+                    cv::Mat I = GetIntensities(x, y, colorChannel); //BGR
 				
 					//solve equation with 16 sets of values
-					CvMat* brdf = SolveEquation(phi, thetaDash, theta, I);
+                    cv::Mat brdf = SolveEquation(phi, thetaDash, theta, I);
 				
 					//when complete write values to surface in model
 					SaveValuesToSurface(currentSurface, brdf, colorChannel); //BGR
 
-					if(cvGetReal1D(brdf, 0) > 0 && cvGetReal1D(brdf, 0) < 1000)
+                    if(brdf.at<double>(0) > 0 && brdf.at<double>(0) < 1000)
 					{
-						avg_kd += cvGetReal1D(brdf, 0);
+                        avg_kd += brdf.at<double>(0);
 						count_kd++;
 					}
 					
-					if(cvGetReal1D(brdf, 1) > 0 && cvGetReal1D(brdf, 1) < 1000)
+                    if(brdf.at<double>(1) > 0 && brdf.at<double>(1) < 1000)
 					{
-						avg_ks += cvGetReal1D(brdf, 1);
+                        avg_ks += brdf.at<double>(1);
 						count_ks++;
 					}
 				
-					if(cvGetReal1D(brdf, 2) > 0 && cvGetReal1D(brdf, 2) < 1000)
+                    if(brdf.at<double>(2) > 0 && brdf.at<double>(2) < 1000)
 					{
-						avg_n += cvGetReal1D(brdf, 2);
+                        avg_n += brdf.at<double>(2);
 						count_n++;
 					}
 					

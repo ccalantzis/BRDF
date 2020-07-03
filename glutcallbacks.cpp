@@ -35,7 +35,7 @@ void* font = GLUT_BITMAP_8_BY_13;
 long m_frameCounter[100];
 int m_frame = 0;
 
-CvMat* m_pixelMap;
+cv::Mat m_pixelMap;
 
 using namespace std;
 
@@ -362,7 +362,7 @@ void DrawMesh()
 			objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
 
 			//calc the light direction
-			GLfloat lightDir[] = {lpos[0] - objectX, lpos[1] - objectY, lpos[2] - objectZ};
+            GLdouble lightDir[] = {lpos[0] - objectX, lpos[1] - objectY, lpos[2] - objectZ};
 
 			//normalize the light direction vector
 			float norm = sqrt(pow(lightDir[0], 2) + pow(lightDir[1], 2) + pow(lightDir[2], 2));
@@ -371,7 +371,7 @@ void DrawMesh()
 			lightDir[2] /= norm;
 
 			//camera direction
-			GLfloat viewDir[] = {m_eyeX - m_centerX, m_eyeY - m_centerY, m_eyeZ - m_centerZ};
+            GLdouble viewDir[] = {m_eyeX - m_centerX, m_eyeY - m_centerY, m_eyeZ - m_centerZ};
 
 			//normalize the camera direction vector
 			norm = sqrt(pow(viewDir[0], 2) + pow(viewDir[1], 2) + pow(viewDir[2], 2));
@@ -380,7 +380,7 @@ void DrawMesh()
 			viewDir[2] /= norm;
 
 			//calc the half vector between light source vector and view vector
-			GLfloat h[] = {lightDir[0] + viewDir[0], lightDir[1] + viewDir[1], lightDir[2] + viewDir[2]};
+            GLdouble h[] = {lightDir[0] + viewDir[0], lightDir[1] + viewDir[1], lightDir[2] + viewDir[2]};
 
 			//normalize the half vector
 			norm = sqrt(pow(h[0], 2) + pow(h[1], 2) + pow(h[2], 2));
@@ -410,8 +410,8 @@ void DrawMesh()
 
 				//calc
 				double scale_factor = m_brdf.m_faces[i].m_normal.m_x * lightDir[0] + m_brdf.m_faces[i].m_normal.m_y * lightDir[1] + m_brdf.m_faces[i].m_normal.m_z * lightDir[2];
-				GLfloat P[] = {-scale_factor * m_brdf.m_faces[i].m_normal.m_x, -scale_factor * m_brdf.m_faces[i].m_normal.m_y, -scale_factor * m_brdf.m_faces[i].m_normal.m_z};
-				GLfloat R[] = {-lightDir[0] - 2*P[0], -lightDir[1] - 2*P[1], -lightDir[2] - 2*P[2]};
+                GLdouble P[] = {-scale_factor * m_brdf.m_faces[i].m_normal.m_x, -scale_factor * m_brdf.m_faces[i].m_normal.m_y, -scale_factor * m_brdf.m_faces[i].m_normal.m_z};
+                GLdouble R[] = {-lightDir[0] - 2*P[0], -lightDir[1] - 2*P[1], -lightDir[2] - 2*P[2]};
 				//calc cos(theta) = dot(R, viewDir)
 				float cosRV = viewDir[0] * R[0] + viewDir[1] * R[1] + viewDir[2] * R[2];
 
@@ -496,13 +496,13 @@ void ResetCamera()
 	if(!m_defaultView)
 		return;
 
-	m_eyeX = cvGetReal2D(m_brdf.GetCameraOrigin(), 0, 0)/10.0;
-	m_eyeY = cvGetReal2D(m_brdf.GetCameraOrigin(), 0, 1)/10.0;
-	m_eyeZ = cvGetReal2D(m_brdf.GetCameraOrigin(), 0, 2)/10.0;
+    m_eyeX = m_brdf.GetCameraOrigin().at<double>(0, 0)/10.0;
+    m_eyeY = m_brdf.GetCameraOrigin().at<double>(0, 1)/10.0;
+    m_eyeZ = m_brdf.GetCameraOrigin().at<double>(0, 2)/10.0;
 
-	double ax = cvGetReal2D(m_brdf.GetA(), 0, 0);
-	double ay = cvGetReal2D(m_brdf.GetA(), 0, 1);
-	double az = cvGetReal2D(m_brdf.GetA(), 0, 2);
+    double ax = m_brdf.GetA().at<double>(0, 0);
+    double ay = m_brdf.GetA().at<double>(0, 1);
+    double az = m_brdf.GetA().at<double>(0, 2);
 
 	//find center on z=0
 	double s = m_eyeZ / az;
@@ -513,101 +513,83 @@ void ResetCamera()
 
 void DrawOnScreenDisplay()
 {
-	//show fps and position values
-	glDisable(GL_LIGHTING);
-	glDisable(GL_LIGHT1);
+    //show fps and position values
+    glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHT1);
 
-	std::string fps = "fps: ";
-	char* fpsNum = new char[10];
-	snprintf(fpsNum, 10, "%d", (int)m_fps);
-	fps += fpsNum;
+    std::string fps = "fps: " + std::to_string((int)m_fps);
 
-	std::string fov = "fovH: ";
-	char* fovNum = new char[10];
-	snprintf(fovNum, 10, "%d", (int)m_glFov);
-	fov += fovNum;
+    std::string fov = "fovH: " + std::to_string((int)m_glFov);
 
-	std::string fovV = "fovV: ";
-	char* fovNumV = new char[10];
-	snprintf(fovNumV, 10, "%d", (int)m_glFovV);
-	fovV += fovNumV;
+    std::string fovV = "fovV: " + std::to_string((int)m_glFovV);
 
-	std::string eyeX = "eyeX: ";
-	char* eyeXStr = new char[10];
-	snprintf(eyeXStr, 10, "%d", (int)m_eyeX);
-	eyeX += eyeXStr;
+    std::string eyeX = "eyeX: " + std::to_string((int)m_eyeX);
 
-	std::string eyeY = "eyeY: ";
-	char* eyeYStr = new char[10];
-	snprintf(eyeYStr, 10, "%d", (int)m_eyeY);
-	eyeY += eyeYStr;
+    std::string eyeY = "eyeY: " + std::to_string((int)m_eyeY);
 
-	std::string eyeZ = "eyeZ: ";
-	char* eyeZStr = new char[10];
-	snprintf(eyeZStr, 10, "%d", (int)m_eyeZ);
-	eyeZ += eyeZStr;
+    std::string eyeZ = "eyeZ: " + std::to_string((int)m_eyeZ);
 
-	std::string esc = "esc: exit";
-	std::string w = "w: increase eyeY";
-	std::string s = "s: decrease eyeY";
-	std::string a = "a: increase eyeX";
-	std::string d = "d: decrease eyeX";
-	std::string y = "q: increase eyeZ";
-	std::string x = "e: decrease eyeZ";
-	std::string l = "l: toggle lights";
-	std::string r = "r: reset camera";
-	std::string h = "h: increase field of view horizontal";
-	std::string j = "j: decrease field of view horizontal";
-	std::string b = "b: increase field of view vertical";
-	std::string n = "n: decrease field of view vertical";
-	std::string p = "p: toggle mapping";
-	std::string m = "m: toggle shaded brdf";
-	std::string c = "c: calc brdf";
+    std::string esc = "esc: exit";
+    std::string w = "w: increase eyeY";
+    std::string s = "s: decrease eyeY";
+    std::string a = "a: increase eyeX";
+    std::string d = "d: decrease eyeX";
+    std::string y = "q: increase eyeZ";
+    std::string x = "e: decrease eyeZ";
+    std::string l = "l: toggle lights";
+    std::string r = "r: reset camera";
+    std::string h = "h: increase field of view horizontal";
+    std::string j = "j: decrease field of view horizontal";
+    std::string b = "b: increase field of view vertical";
+    std::string n = "n: decrease field of view vertical";
+    std::string p = "p: toggle mapping";
+    std::string m = "m: toggle shaded brdf";
+    std::string c = "c: calc brdf";
 
-	glPushMatrix();
+    glPushMatrix();
 
-	DrawString(fps, 10, 10, color_1, font);
-	DrawString(eyeZ, 10, 20, color_1, font);
-	DrawString(eyeY, 10, 30, color_1, font);
-	DrawString(eyeX, 10, 40, color_1, font);
-	DrawString(fov, 10, 50, color_1, font);
-	DrawString(fovV, 10, 60, color_1, font);
+    DrawString(fps, 10, 10, color_1, font);
+    DrawString(eyeZ, 10, 20, color_1, font);
+    DrawString(eyeY, 10, 30, color_1, font);
+    DrawString(eyeX, 10, 40, color_1, font);
+    DrawString(fov, 10, 50, color_1, font);
+    DrawString(fovV, 10, 60, color_1, font);
 
-	int i=1;
+    int i=1;
 
-	DrawString(esc, 10, m_height-10*i++, color_1, font);
-	DrawString(w, 10, m_height-10*i++, color_1, font);
-	DrawString(s, 10, m_height-10*i++, color_1, font);
-	DrawString(a, 10, m_height-10*i++, color_1, font);
-	DrawString(d, 10, m_height-10*i++, color_1, font);
-	DrawString(y, 10, m_height-10*i++, color_1, font);
-	DrawString(x, 10, m_height-10*i++, color_1, font);
-	DrawString(p, 10, m_height-10*i++, color_1, font);
-	DrawString(r, 10, m_height-10*i++, color_1, font);
-	DrawString(h, 10, m_height-10*i++, color_1, font);
-	DrawString(j, 10, m_height-10*i++, color_1, font);
-	DrawString(b, 10, m_height-10*i++, color_1, font);
-	DrawString(n, 10, m_height-10*i++, color_1, font);
-	if(m_showShadedBRDF)
-		DrawString(m, 10, m_height-10*i++, color_3, font);
-	else
-		DrawString(m, 10, m_height-10*i++, color_2, font);
+    DrawString(esc, 10, m_height-10*i++, color_1, font);
+    DrawString(w, 10, m_height-10*i++, color_1, font);
+    DrawString(s, 10, m_height-10*i++, color_1, font);
+    DrawString(a, 10, m_height-10*i++, color_1, font);
+    DrawString(d, 10, m_height-10*i++, color_1, font);
+    DrawString(y, 10, m_height-10*i++, color_1, font);
+    DrawString(x, 10, m_height-10*i++, color_1, font);
+    DrawString(p, 10, m_height-10*i++, color_1, font);
+    DrawString(r, 10, m_height-10*i++, color_1, font);
+    DrawString(h, 10, m_height-10*i++, color_1, font);
+    DrawString(j, 10, m_height-10*i++, color_1, font);
+    DrawString(b, 10, m_height-10*i++, color_1, font);
+    DrawString(n, 10, m_height-10*i++, color_1, font);
+    if(m_showShadedBRDF)
+        DrawString(m, 10, m_height-10*i++, color_3, font);
+    else
+        DrawString(m, 10, m_height-10*i++, color_2, font);
 
-	if(m_lights)
-		DrawString(l, 10, m_height-10*i++, color_2, font);
-	else
-		DrawString(l, 10, m_height-10*i++, color_1, font);
-	DrawString(c, 10, m_height-10*i++, color_1, font);
+    if(m_lights)
+        DrawString(l, 10, m_height-10*i++, color_2, font);
+    else
+        DrawString(l, 10, m_height-10*i++, color_1, font);
+    DrawString(c, 10, m_height-10*i++, color_1, font);
 
-	glPopMatrix();
+    glPopMatrix();
 
-	//cleanup
-	delete fpsNum;
-	delete fovNum;
-	delete fovNumV;
-	delete eyeXStr;
-	delete eyeYStr;
-	delete eyeZStr;
+    //cleanup
+//	delete fpsNum;
+//	delete fovNum;
+//	delete fovNumV;
+//	delete eyeXStr;
+//	delete eyeYStr;
+//	delete eyeZStr;
 }
 
 void CalculateFrameRate(uint32_t newVal)
@@ -658,7 +640,7 @@ void DrawMapping()
 	for(int x=0; x < m_width; x++)
 		for(int y=0; y < m_height; y++)
 		{
-			unsigned int curr = cvGetReal2D(m_pixelMap, y, x);
+            unsigned int curr = m_pixelMap.at<unsigned int>(y, x);
 			if(curr > 0)
 				DrawString(sign, x, y, color_1, font);
 		}
@@ -686,9 +668,9 @@ void Display_(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-	double ox = cvGetReal2D(m_brdf.GetO(), 0, 0);
-	double oy = cvGetReal2D(m_brdf.GetO(), 0, 1);
-	double oz = cvGetReal2D(m_brdf.GetO(), 0, 2);
+    double ox = m_brdf.GetO().at<double>(0, 0);
+    double oy = m_brdf.GetO().at<double>(0, 1);
+    double oz = m_brdf.GetO().at<double>(0, 2);
     gluLookAt(m_eyeX, m_eyeY, m_eyeZ, m_centerX, m_centerY, m_centerZ, -ox, -oy, -oz);
 	
 	//draw the scene
@@ -718,7 +700,7 @@ void Display_(void)
 	gluOrtho2D(0, m_width, 0, m_height);//set to orthogonal projection
 
 	//on screen infos
-	DrawOnScreenDisplay();
+    DrawOnScreenDisplay();
 	DrawMapping();
 	// display back buffer
     glutSwapBuffers();

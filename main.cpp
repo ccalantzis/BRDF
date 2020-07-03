@@ -9,8 +9,8 @@
 #endif
 #include <iostream>
 #include <fstream>
-#include "cv.h"
-#include "highgui.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include "brdfdata.h"
 #include <GL/gl.h> //do we really need that or just glut?
 #include "glut.h"
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
 	cout << "loading data.." << endl;
 	//read in 3d model + calc surface normals
-	m_brdf.LoadModel("img\\timber.obj");
+    m_brdf.LoadModel("img/timber/timber.obj");
 	m_brdf.m_model = 1; //0: Phong, 1: Blinn-Phong
 
 	//read in 16 images
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 	//m_brdf.PrintNormalisedImages();
 	
 	//read in geometry and camera infos
-	m_brdf.LoadCameraParameters("img\\timber.cal");
+    m_brdf.LoadCameraParameters("img/timber/timber.cal");
 
 	//initialise led positions
 	m_brdf.InitLEDs();
