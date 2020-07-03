@@ -13,6 +13,7 @@
 
 using namespace std;
 typedef Eigen::RowVector3d vertex;
+typedef Eigen::Matrix<double,3,3> triangle;
 
 struct brdfSurface
 {
@@ -21,13 +22,6 @@ struct brdfSurface
 	double n;
 };
 
-struct triangle
-{
-	vertex m_point[3];
-	vertex m_normal;
-	int m_numFaces;
-	brdfSurface brdf[3]; //BGR
-};
 
 class CBRDFdata
 {
@@ -46,12 +40,16 @@ private:
     cv::Mat m_a;
     cv::Mat m_p;
     cv::Mat m_ledPositions;
-	vertex* m_vertices;
-	vertex* m_led;
+    //vertex* m_vertices;
+    //vertex* m_led;
 
 public:
 	int m_model; //0: Phong, 1: Blinn-Phong
-    triangle* m_faces;
+    Eigen::MatrixXi m_faces;
+    Eigen::MatrixXd m_vertices;
+    Eigen::MatrixXd face_normals;
+    Eigen::Matrix<brdfSurface, Eigen::Dynamic, 3> brdf_surfaces;
+    Eigen::MatrixXd m_led;
 
 	CBRDFdata()
 	{
@@ -101,8 +99,8 @@ public:
 	void WriteVertices(vector<char*>* linesInFile);
 	int GetNumFaces(vector<char*>* linesInFile);
 	void WriteFaces(vector<char*>* linesInFile);
-	void CalcFaceNormals();
-	void ScaleMesh();
+    Eigen::MatrixXd CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
+    void ScaleMesh();
     cv::Mat GetCameraOrigin();
     cv::Mat GetA();
     cv::Mat GetO();

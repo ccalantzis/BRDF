@@ -271,81 +271,26 @@ bool CBRDFdata::ReadInFile(std::string filename, std::vector<char>* buffer)
 	return true;
 }
 
-//returns 0 if file could not be read, 1 otherwise
-bool CBRDFdata::ReadInFileAsLines(std::string filename, std::vector<char*>* buffer)
-{
-	buffer->clear();
-
-	std::ifstream file;
-	file.open(filename, std::ios::in | ios::binary);
-
-	if(!file.fail())
-	{ 
-		while(!file.eof())
-		{
-			char* currLine = new char[1000];
-			file.getline(currLine, 1000);
-			buffer->push_back(currLine);
-		}
-		file.close();
-    } 
-	else
-       return false;
-
-	return true;
-}
-
 void CBRDFdata::ScaleMesh()
 {
-	double maxX = 0.0;
-	double maxY = 0.0;
-	double maxZ = 0.0;
+    Eigen::RowVector3d max_vertex = m_vertices.colwise().maxCoeff();
+    Eigen::RowVector3d min_vertex = m_vertices.colwise().minCoeff();
 
-	double minX = 0.0;
-	double minY = 0.0;
-	double minZ = 0.0;
+    double diffX = max_vertex(0) - min_vertex(0);
+    double diffY = max_vertex(1) - min_vertex(1);
+    double diffZ = max_vertex(2) - min_vertex(2);
 
-	//get max values
-	for(int i=0; i<m_faces->m_numFaces; i++)
-	{
-		for(int j=0; j<3; j++)
-		{
-            if(m_faces[i].m_point[j][0] > maxX)
-                maxX = m_faces[i].m_point[j][0];
-            if(m_faces[i].m_point[j][1] > maxY)
-                maxY = m_faces[i].m_point[j][1];
-            if(m_faces[i].m_point[j][2] > maxZ)
-                maxZ = m_faces[i].m_point[j][2];
+    //in the original code they used 10. But they weren't calculating the min and max values correctly.
+    //the min might not be less than 0, guys. and on that note, the max might not be greater than 0.
+    double scaleFactor = 8.0;
 
-            if(m_faces[i].m_point[j][0] < minX)
-                minX = m_faces[i].m_point[j][0];
-            if(m_faces[i].m_point[j][1] < minY)
-                minY = m_faces[i].m_point[j][1];
-            if(m_faces[i].m_point[j][2] < minZ)
-                minZ = m_faces[i].m_point[j][2];
-		}
-	}
+    m_vertices.col(0) /= diffX;
+    m_vertices.col(1) /= diffY;
+    m_vertices.col(2) /= diffZ;
 
-	double diffX = maxX - minX;
-	double diffY = maxY - minY;
-	double diffZ = maxZ - minZ;
-
-	//scale
-	double scaleFactor = 10.0;
-	for(int i=0; i<m_faces->m_numFaces; i++)
-	{
-		for(int j=0; j<3; j++)
-		{
-            m_faces[i].m_point[j][0] /= diffX;
-            m_faces[i].m_point[j][1] /= diffY;
-            m_faces[i].m_point[j][2] /= diffZ;
-
-            m_faces[i].m_point[j][0] *= scaleFactor;
-            m_faces[i].m_point[j][1] *= scaleFactor;
-            m_faces[i].m_point[j][2] *= scaleFactor;
-		}
-	}
-
+    m_vertices.col(0) *= scaleFactor;
+    m_vertices.col(1) *= scaleFactor;
+    m_vertices.col(2) *= scaleFactor;
 }
 
 void CBRDFdata::LoadModel(std::string filename)
@@ -355,75 +300,33 @@ void CBRDFdata::LoadModel(std::string filename)
 	//give every surface a number, if they don't already have one(needed for later mapping with pixels) -> number of index
 	//choose appropriate data structure, remember: we need to be able to store the BRDF infos as well for each surface/triangle
 
-	vector<char*>* linesInFile = new vector<char*>;
-	ReadInFileAsLines(filename, linesInFile);
+    igl::readOBJ(filename, m_vertices, m_faces);
 
-    Eigen::MatrixXi F;
-    Eigen::MatrixXd V;
-
-    igl::readOBJ(filename, V, F);
-
-    int numVertices = V.rows();
-
-	m_vertices = new vertex[numVertices];
-	
-    for(int i=0; i<numVertices; i++){
-        m_vertices[i][0] = V(i,0);
-        m_vertices[i][1] = V(i,1);
-        m_vertices[i][2] = V(i,2);
-    }
-
-    int num_faces = F.rows();
-
-	m_faces = new triangle[num_faces];
-	m_faces[0].m_numFaces = num_faces;
-
-    for(int i=0; i<num_faces; i++){
-        m_faces[i].m_point[0] = m_vertices[F(i,0)];
-        m_faces[i].m_point[1] = m_vertices[F(i,1)];
-        m_faces[i].m_point[2] = m_vertices[F(i,2)];
-    }
-
-	CalcFaceNormals();
+    face_normals = CalcFaceNormals(m_vertices, m_faces);
+    brdf_surfaces.resize(m_faces.rows(), 3);
 
     ScaleMesh();
 }
 
-void CBRDFdata::CalcFaceNormals()
+Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F)
 {
-	bool fail = false;
-
-	for(int i=0; i<m_faces[0].m_numFaces; i++)
-	{
-		m_faces[i].m_numFaces = m_faces[0].m_numFaces;
-		vertex P = m_faces[i].m_point[0];
-		vertex Q = m_faces[i].m_point[1];
-		vertex R = m_faces[i].m_point[2];
-
-        double a1 = Q[0] - P[0];
-        double a2 = Q[1] - P[1];
-        double a3 = Q[2] - P[2];
-
-        double b1 = R[0] - P[0];
-        double b2 = R[1] - P[1];
-        double b3 = R[2] - P[2];
-
-		//Kreuzprodukt
-		double c1 = a2*b3 - a3*b2;
-		double c2 = a3*b1 - a1*b3;
-		double c3 = a1*b2 - a2*b1;
-
-		double norm = sqrt(c1*c1 + c2*c2 + c3*c3);
-
-		if(norm == 0.0) fail = true;
-
-        m_faces[i].m_normal[0] = c1/norm;
-        m_faces[i].m_normal[1] = c2/norm;
-        m_faces[i].m_normal[2] = c3/norm;
-	}
-
-	if(fail)
-		cout << "Error in: CalcFaceNormals()" << endl;
+    Eigen::MatrixXd FN;
+    FN.resize(F.rows(), 3);
+    for (int rowCount_F=0; rowCount_F <F.rows(); ++rowCount_F)
+    {
+        int vertex1_index = F(rowCount_F,0);
+        int vertex2_index = F(rowCount_F,1);
+        int vertex3_index = F(rowCount_F,2);
+        Eigen::RowVector3d vertex1 = V.block<1,3>(vertex1_index, 0);
+        Eigen::RowVector3d vertex2 = V.block<1,3>(vertex2_index, 0);
+        Eigen::RowVector3d vertex3 = V.block<1,3>(vertex3_index, 0);
+        Eigen::RowVector3d edge1 = vertex2 - vertex1;
+        Eigen::RowVector3d edge2 = vertex3 - vertex1;
+        Eigen::RowVector3d face_normal = edge1.cross(edge2);
+        face_normal.normalize();
+        FN.row(rowCount_F) = face_normal;
+    }
+    return FN;
 }
 
 int CBRDFdata::GetNumFaces(vector<char*>* linesInFile)
@@ -502,9 +405,9 @@ void CBRDFdata::SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorC
 	//attention: mind the color channel.. so we will need that information 3x at the surface..
 	//brdf matrix contains parameters: kd, ks and n - in that order
 
-    m_faces[currentSurface].brdf[colorChannel].kd = brdf.at<double>(0);
-    m_faces[currentSurface].brdf[colorChannel].ks = brdf.at<double>(1);
-    m_faces[currentSurface].brdf[colorChannel].n = brdf.at<double>(2);
+    brdf_surfaces(currentSurface, colorChannel).kd = brdf.at<double>(0);
+    brdf_surfaces(currentSurface, colorChannel).ks = brdf.at<double>(1);
+    brdf_surfaces(currentSurface, colorChannel).n = brdf.at<double>(2);
 }
 
 cv::Mat CBRDFdata::GetCameraOrigin()
@@ -547,7 +450,7 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 	//the surface that pixel points
 	//this map should be the same for all images, so we only have to calc it ones
 
-	for(int i=0; i<m_faces->m_numFaces; i++)
+    for(int i=0; i<m_faces.rows(); i++)
 	{
 		GLdouble winX = 0.0;
 		GLdouble winY = 0.0;
@@ -559,9 +462,9 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 		
 		for (int j = 0; j < 3; j++) //get center of current triangle
 		{
-            objectX += m_faces[i].m_point[j][0];
-            objectY += m_faces[i].m_point[j][1];
-            objectZ += m_faces[i].m_point[j][2];
+            objectX += m_vertices(m_faces(i,j),0);
+            objectY += m_vertices(m_faces(i,j),1);
+            objectZ += m_vertices(m_faces(i,j),2);
 		}
 		
 		objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
@@ -594,7 +497,7 @@ void CBRDFdata::InitLEDs()
 	//led 9,10,11,12: -----------------------------||---, height ------------------||-- 15,0cm
 	//led 13,14,15,16: ----------------------------||---, height ------------------||--  4,5cm
 
-	m_led = new vertex[m_numImages];
+    m_led.resize(m_numImages, 3);
 
 	for (int i = 0; i < m_numImages; i++)
 	{		
@@ -602,16 +505,16 @@ void CBRDFdata::InitLEDs()
 		switch (i / 4)
 		{
 			case 0: 
-                m_led[i][1] = 365.0 - 115.0;
+                m_led(i,1) = 365.0 - 115.0;
 				break;
 			case 1: 
-                m_led[i][1] = 260.0 - 115.0;
+                m_led(i,1) = 260.0 - 115.0;
 				break;
 			case 2: 
-                m_led[i][1] = 150.0 - 115.0;
+                m_led(i,1) = 150.0 - 115.0;
 				break;
 			default: 
-                m_led[i][1] = 45.0 - 115.0;
+                m_led(i,1) = 45.0 - 115.0;
 				break;
 		}
 		
@@ -619,20 +522,20 @@ void CBRDFdata::InitLEDs()
 		switch (i % 4)
 		{
 		case 0:
-            m_led[i][0] = 305.0 * sin(6.0/33.0*CV_PI*0.5);
-            m_led[i][2] = 305.0 * cos(6.0/33.0*CV_PI*0.5);
+            m_led(i,0) = 305.0 * sin(6.0/33.0*CV_PI*0.5);
+            m_led(i,2) = 305.0 * cos(6.0/33.0*CV_PI*0.5);
 			break;
 		case 1:
-            m_led[i][0] = 305.0 * sin(13.0/33.0*CV_PI*0.5);
-            m_led[i][2] = 305.0 * cos(13.0/33.0*CV_PI*0.5);
+            m_led(i,0) = 305.0 * sin(13.0/33.0*CV_PI*0.5);
+            m_led(i,2) = 305.0 * cos(13.0/33.0*CV_PI*0.5);
 			break;
 		case 2:
-            m_led[i][0] = 305.0 * sin(20.0/33.0*CV_PI*0.5);
-            m_led[i][2] = 305.0 * cos(20.0/33.0*CV_PI*0.5);
+            m_led(i,0) = 305.0 * sin(20.0/33.0*CV_PI*0.5);
+            m_led(i,2) = 305.0 * cos(20.0/33.0*CV_PI*0.5);
 			break;
 		default:
-            m_led[i][0] = 305.0 * sin(27.0/33.0*CV_PI*0.5);
-            m_led[i][2] = 305.0 * cos(27.0/33.0*CV_PI*0.5);
+            m_led(i,0) = 305.0 * sin(27.0/33.0*CV_PI*0.5);
+            m_led(i,2) = 305.0 * cos(27.0/33.0*CV_PI*0.5);
 			break;
 		}
 	}
@@ -651,7 +554,10 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 	//TODO: check if the below code works!
 	for (int i = 0; i < m_numImages; i++)
 	{
-		triangle surface = m_faces[currentSurface];
+        triangle surface;
+        surface.row(0) = m_vertices.row(m_faces(currentSurface,0));
+        surface.row(1) = m_vertices.row(m_faces(currentSurface,1));
+        surface.row(2) = m_vertices.row(m_faces(currentSurface,2));
 		
 		//center of triangle
 		double x = 0;
@@ -660,9 +566,9 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		
 		for(int j = 0; j < 3; j++)
 		{
-            x += surface.m_point[j][0];
-            y += surface.m_point[j][1];
-            z += surface.m_point[j][2];
+            x += surface(j,0);
+            y += surface(j,1);
+            z += surface(j,2);
 		}
 		
 		x /= 3.0; y /= 3.0; z /= 3.0;
@@ -679,9 +585,9 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		Vz /= length;
 
 		//-1 * light vector, this orientation is needed for the formula below
-        double Lx = x - m_led[i][0];
-        double Ly = x - m_led[i][1];
-        double Lz = x - m_led[i][2];
+        double Lx = x - m_led(i,0);
+        double Ly = x - m_led(i,1);
+        double Lz = x - m_led(i,2);
 			
 		length = sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
 			
@@ -693,10 +599,10 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		//P = (N*L) * N
 		//R = -2 * (N*L) * N + L = -2 * P + L
 
-        double scale_factor = surface.m_normal[0] * Lx + surface.m_normal[1] * Ly + surface.m_normal[2] * Lz;
-        double Px = scale_factor * surface.m_normal[0];
-        double Py = scale_factor * surface.m_normal[1];
-        double Pz = scale_factor * surface.m_normal[2];
+        double scale_factor = face_normals(currentSurface,0) * Lx + face_normals(currentSurface,1) * Ly + face_normals(currentSurface,2) * Lz;
+        double Px = scale_factor * face_normals(currentSurface,0);
+        double Py = scale_factor * face_normals(currentSurface,1);
+        double Pz = scale_factor * face_normals(currentSurface,2);
 
 		double Rx = Lx - 2*Px;
 		double Ry = Ly - 2*Py;
@@ -720,7 +626,10 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 	//TODO: check if the below code works!
 	for (int i = 0; i < m_numImages; i++)
 	{
-		triangle surface = m_faces[currentSurface];
+        triangle surface;
+        surface.row(0) = m_vertices.row(m_faces(currentSurface,0));
+        surface.row(1) = m_vertices.row(m_faces(currentSurface,1));
+        surface.row(2) = m_vertices.row(m_faces(currentSurface,2));
 		
 		//center of triangle
 		double x = 0;
@@ -729,17 +638,17 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 		
 		for(int j = 0; j < 3; j++)
 		{
-            x += surface.m_point[j][0];
-            y += surface.m_point[j][1];
-            z += surface.m_point[j][2];
+            x += surface(j,0);
+            y += surface(j,1);
+            z += surface(j,2);
 		}
 		
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//light vector
-        double Lx = m_led[i][0] - x;
-        double Ly = m_led[i][1] - y;
-        double Lz = m_led[i][2] - z;
+        double Lx = m_led(i,0) - x;
+        double Ly = m_led(i,1) - y;
+        double Lz = m_led(i,2) - z;
 			
 		double length = sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
 			
@@ -749,8 +658,8 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 			
 		//light vector * normal vector = phi
 		//it actually return cosPhi! but thats ok, we only need cosPhi!
-        double angle = Lx * surface.m_normal[0] + Ly * surface.m_normal[1] + Lz * surface.m_normal[2];
-		//double actualAngle = acos(angle)*180.0/CV_PI;
+        double angle = Lx * face_normals(currentSurface,0) + Ly * face_normals(currentSurface,1) + Lz * face_normals(currentSurface,2);
+        //double actualAngle = acos(angle)*180.0/CV_PI;
         phi.at<double>(i) = angle;
 	}
 
@@ -765,8 +674,11 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 
 	for (int i = 0; i < m_numImages; i++)
 	{
-		triangle surface = m_faces[currentSurface];
-		
+        triangle surface;
+        surface.row(0) = m_vertices.row(m_faces(currentSurface,0));
+        surface.row(1) = m_vertices.row(m_faces(currentSurface,1));
+        surface.row(2) = m_vertices.row(m_faces(currentSurface,2));
+
 		//center of triangle
 		double x = 0;
 		double y = 0;
@@ -774,17 +686,17 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 		
 		for(int j = 0; j < 3; j++)
 		{
-            x += surface.m_point[j][0];
-            y += surface.m_point[j][1];
-            z += surface.m_point[j][2];
+            x += surface(j,0);
+            y += surface(j,1);
+            z += surface(j,2);
 		}
 		
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//|light vector + observer vector| = half vector
-        double Hx = m_led[i][0] - 2*x + m_p.at<double>(0);
-        double Hy = m_led[i][1] - 2*y + m_p.at<double>(1);
-        double Hz = m_led[i][2] - 2*z + m_p.at<double>(2);
+        double Hx = m_led(i,0) - 2*x + m_p.at<double>(0);
+        double Hy = m_led(i,1) - 2*y + m_p.at<double>(1);
+        double Hz = m_led(i,2) - 2*z + m_p.at<double>(2);
 			
 		double length = sqrt(Hx*Hx + Hy*Hy + Hz*Hz);
 			
@@ -793,9 +705,9 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 		Hz /= length;
 			
 		//half vector * normal vector = theta
-		//it actually return cosTheta'! but thats ok, we only need cosTheta'!
-        double angle = Hx * surface.m_normal[0] + Hy * surface.m_normal[1] + Hz * surface.m_normal[2];
-		//double actualAngle = acos(angle)*180.0/CV_PI;
+        //it actually return cosTheta'! but thats ok, we only need cosTheta'!
+        double angle = Hx * face_normals(currentSurface,0) + Hy * face_normals(currentSurface,1) + Hz * face_normals(currentSurface,2);
+        //double actualAngle = acos(angle)*180.0/CV_PI;
         theta_dash.at<double>(i) = angle;
 	}
 
