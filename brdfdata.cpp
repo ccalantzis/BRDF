@@ -645,7 +645,7 @@ void CBRDFdata::InitLEDs()
 
 cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 {
-    cv::Mat theta(1, m_numImages, CV_32F);
+    cv::Mat theta(1, m_numImages, CV_64F);
 	//matrix theta contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
 	//TODO: check if the below code works!
@@ -714,7 +714,7 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 
 cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 {
-    cv::Mat phi(1, m_numImages, CV_32F);
+    cv::Mat phi(1, m_numImages, CV_64F);
 	//matrix phi contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
 	//TODO: check if the below code works!
@@ -760,7 +760,7 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 //calcs the product of surface normal and H
 cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 {
-    cv::Mat theta_dash(1, m_numImages, CV_32F);
+    cv::Mat theta_dash(1, m_numImages, CV_64F);
 	//matrix theta_dash contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
 	for (int i = 0; i < m_numImages; i++)
@@ -804,7 +804,7 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 
 cv::Mat CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
 {
-    cv::Mat I = cv::Mat(1, m_numImages, CV_32F);
+    cv::Mat I = cv::Mat(1, m_numImages, CV_64F);
 	//matrix I contains image Intensities for iamge1 position 0 and intensity for image16 in position 15(m_numImages-1)
 	//this function just gets the values of one color channel!
 	int num = 0;
@@ -850,7 +850,7 @@ void BRDFFunc(double *p, double *x, int m, int n, void *data)
 
 cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, cv::Mat I)
 {
-    cv::Mat brdf = cv::Mat(1, 3, CV_32F);
+    cv::Mat brdf = cv::Mat(1, 3, CV_64F);
 	//solve equation I = kd*cos(phi) + ks*cos^n(phi) with 16 sets of values
 	//returns the resulting parameters kd, ks and n, in that order in brdf
 	//phi: contains 16 values
@@ -941,10 +941,12 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 
 			if(currentSurface > 0) //pixel corresponds to a surface on the model
 			{				
-                cv::Mat phi = GetCosLN(currentSurface);
-                cv::Mat thetaDash = GetCosNH(currentSurface);
-                cv::Mat theta = GetCosRV(currentSurface);
-
+                cv::Mat phi(1, m_numImages, CV_64F);
+                phi = GetCosLN(currentSurface);
+                cv::Mat thetaDash(1, m_numImages, CV_64F);
+                thetaDash = GetCosNH(currentSurface);
+                cv::Mat theta(1, m_numImages, CV_64F);
+                theta = GetCosRV(currentSurface);
 				for(int colorChannel=0; colorChannel<3; colorChannel++) //do the calculation once for each color-channel
 				{
 					//build vector I
