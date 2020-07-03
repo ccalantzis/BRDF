@@ -57,7 +57,7 @@ private:
 
 public:
 	int m_model; //0: Phong, 1: Blinn-Phong
-	triangle* m_faces;
+    triangle* m_faces;
 
 	CBRDFdata()
 	{

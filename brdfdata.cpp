@@ -128,7 +128,7 @@ void CBRDFdata::PrintNormalisedImages()
 
 bool CBRDFdata::LoadDarkImage()
 {
-    string path = "img/";
+    string path = "img/timber/";
 	string name = "dark";
 	string extension = ".png";
 		
@@ -201,7 +201,7 @@ void CBRDFdata::WriteValue(std::string parameter, std::string value)
         m_principal_point.at<double>(0) = val;
 
 	if(parameter == "cy")
-        m_principal_point.at<double>(0) = val;
+        m_principal_point.at<double>(1) = val;
 
 	if(parameter == "f")
 		m_focalLength = val;
@@ -367,14 +367,22 @@ void CBRDFdata::LoadModel(std::string filename)
 
 	m_vertices = new vertex[numVertices];
 	
-	WriteVertices(linesInFile);
+    for(int i=0; i<numVertices; i++){
+        m_vertices[i].m_x = V(i,0);
+        m_vertices[i].m_y = V(i,1);
+        m_vertices[i].m_z = V(i,2);
+    }
 
     int num_faces = F.rows();
 
 	m_faces = new triangle[num_faces];
 	m_faces[0].m_numFaces = num_faces;
 
-	WriteFaces(linesInFile);
+    for(int i=0; i<num_faces; i++){
+        m_faces[i].m_point[0] = m_vertices[F(i,0)];
+        m_faces[i].m_point[1] = m_vertices[F(i,1)];
+        m_faces[i].m_point[2] = m_vertices[F(i,2)];
+    }
 
 	CalcFaceNormals();
 
