@@ -12,13 +12,7 @@
 #include <Eigen/Dense>
 
 using namespace std;
-
-struct vertex
-{
-	double m_x;
-	double m_y;
-	double m_z;
-};
+typedef Eigen::RowVector3d vertex;
 
 struct brdfSurface
 {

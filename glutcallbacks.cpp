@@ -327,10 +327,10 @@ void DrawMesh()
 			for(int i=0; i < m_brdf.m_faces->m_numFaces; i++)
 			{
 				glBegin(GL_TRIANGLES);
-					glNormal3f(m_brdf.m_faces[i].m_normal.m_x,   m_brdf.m_faces[i].m_normal.m_y,   m_brdf.m_faces[i].m_normal.m_z);
-					glVertex3f(m_brdf.m_faces[i].m_point[0].m_x, m_brdf.m_faces[i].m_point[0].m_y, m_brdf.m_faces[i].m_point[0].m_z);
-					glVertex3f(m_brdf.m_faces[i].m_point[1].m_x, m_brdf.m_faces[i].m_point[1].m_y, m_brdf.m_faces[i].m_point[1].m_z);
-					glVertex3f(m_brdf.m_faces[i].m_point[2].m_x, m_brdf.m_faces[i].m_point[2].m_y, m_brdf.m_faces[i].m_point[2].m_z);
+                    glNormal3f(m_brdf.m_faces[i].m_normal[0],   m_brdf.m_faces[i].m_normal[1],   m_brdf.m_faces[i].m_normal[2]);
+                    glVertex3f(m_brdf.m_faces[i].m_point[0][0], m_brdf.m_faces[i].m_point[0][1], m_brdf.m_faces[i].m_point[0][2]);
+                    glVertex3f(m_brdf.m_faces[i].m_point[1][0], m_brdf.m_faces[i].m_point[1][1], m_brdf.m_faces[i].m_point[1][2]);
+                    glVertex3f(m_brdf.m_faces[i].m_point[2][0], m_brdf.m_faces[i].m_point[2][1], m_brdf.m_faces[i].m_point[2][2]);
 				glEnd();
 			}
 
@@ -355,9 +355,9 @@ void DrawMesh()
 		
 			for (int j = 0; j < 3; j++)
 			{
-				objectX += m_brdf.m_faces[i].m_point[j].m_x;
-				objectY += m_brdf.m_faces[i].m_point[j].m_y;
-				objectZ += m_brdf.m_faces[i].m_point[j].m_z;
+                objectX += m_brdf.m_faces[i].m_point[j][0];
+                objectY += m_brdf.m_faces[i].m_point[j][1];
+                objectZ += m_brdf.m_faces[i].m_point[j][2];
 			}
 		
 			objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
@@ -390,7 +390,7 @@ void DrawMesh()
 			h[2] /= norm;			
 
 			//calc cos(phi) = dot(normal, lightvector)
-			float cosLN = m_brdf.m_faces[i].m_normal.m_x * lightDir[0] + m_brdf.m_faces[i].m_normal.m_y * lightDir[1] + m_brdf.m_faces[i].m_normal.m_z * lightDir[2];
+            float cosLN = m_brdf.m_faces[i].m_normal[0] * lightDir[0] + m_brdf.m_faces[i].m_normal[1] * lightDir[1] + m_brdf.m_faces[i].m_normal[2] * lightDir[2];
 
 			float brdfB = 0.0;
 			float brdfG = 0.0;
@@ -399,7 +399,7 @@ void DrawMesh()
 			if(m_brdf.m_model == 1) //BLINN-PHONG!
 			{
 				//calc cos(thetaDash) = dot(normal, h)
-				float cosNH = m_brdf.m_faces[i].m_normal.m_x * h[0] + m_brdf.m_faces[i].m_normal.m_y * h[1] + m_brdf.m_faces[i].m_normal.m_z * h[2];
+                float cosNH = m_brdf.m_faces[i].m_normal[0] * h[0] + m_brdf.m_faces[i].m_normal[1] * h[1] + m_brdf.m_faces[i].m_normal[2] * h[2];
 
 				//Blinn-Phong colors
 				brdfB = m_brdf.m_faces[i].brdf[0].kd * cosLN + m_brdf.m_faces[i].brdf[0].ks * (pow(cosNH, (float)m_brdf.m_faces[i].brdf[0].n));
@@ -410,8 +410,8 @@ void DrawMesh()
 			{
 
 				//calc
-				double scale_factor = m_brdf.m_faces[i].m_normal.m_x * lightDir[0] + m_brdf.m_faces[i].m_normal.m_y * lightDir[1] + m_brdf.m_faces[i].m_normal.m_z * lightDir[2];
-                GLdouble P[] = {-scale_factor * m_brdf.m_faces[i].m_normal.m_x, -scale_factor * m_brdf.m_faces[i].m_normal.m_y, -scale_factor * m_brdf.m_faces[i].m_normal.m_z};
+                double scale_factor = m_brdf.m_faces[i].m_normal[0] * lightDir[0] + m_brdf.m_faces[i].m_normal[1] * lightDir[1] + m_brdf.m_faces[i].m_normal[2] * lightDir[2];
+                GLdouble P[] = {-scale_factor * m_brdf.m_faces[i].m_normal[0], -scale_factor * m_brdf.m_faces[i].m_normal[1], -scale_factor * m_brdf.m_faces[i].m_normal[2]};
                 GLdouble R[] = {-lightDir[0] - 2*P[0], -lightDir[1] - 2*P[1], -lightDir[2] - 2*P[2]};
 				//calc cos(theta) = dot(R, viewDir)
 				float cosRV = viewDir[0] * R[0] + viewDir[1] * R[1] + viewDir[2] * R[2];
@@ -423,7 +423,7 @@ void DrawMesh()
 			}
 
 			glBegin(GL_TRIANGLES);
-				glNormal3f(m_brdf.m_faces[i].m_normal.m_x,  m_brdf.m_faces[i].m_normal.m_y,   m_brdf.m_faces[i].m_normal.m_z);
+                glNormal3f(m_brdf.m_faces[i].m_normal[0],  m_brdf.m_faces[i].m_normal[1],   m_brdf.m_faces[i].m_normal[2]);
 
 				//glUniform3f(my_vec3R_location, m_brdf.m_faces[i].brdf[0].kd, m_brdf.m_faces[i].brdf[0].ks, m_brdf.m_faces[i].brdf[0].n);
 				//glUniform3f(my_vec3G_location, m_brdf.m_faces[i].brdf[1].kd, m_brdf.m_faces[i].brdf[1].ks, m_brdf.m_faces[i].brdf[1].n);
@@ -431,9 +431,9 @@ void DrawMesh()
 				//glUniform1f(my_cosPhi_location, cosPhi);
 
 				glColor4f(brdfR, brdfG, brdfB, 1.0);
-				glVertex3f(m_brdf.m_faces[i].m_point[0].m_x, m_brdf.m_faces[i].m_point[0].m_y, m_brdf.m_faces[i].m_point[0].m_z);
-				glVertex3f(m_brdf.m_faces[i].m_point[1].m_x, m_brdf.m_faces[i].m_point[1].m_y, m_brdf.m_faces[i].m_point[1].m_z);
-				glVertex3f(m_brdf.m_faces[i].m_point[2].m_x, m_brdf.m_faces[i].m_point[2].m_y, m_brdf.m_faces[i].m_point[2].m_z);
+                glVertex3f(m_brdf.m_faces[i].m_point[0][0], m_brdf.m_faces[i].m_point[0][1], m_brdf.m_faces[i].m_point[0][2]);
+                glVertex3f(m_brdf.m_faces[i].m_point[1][0], m_brdf.m_faces[i].m_point[1][1], m_brdf.m_faces[i].m_point[1][2]);
+                glVertex3f(m_brdf.m_faces[i].m_point[2][0], m_brdf.m_faces[i].m_point[2][1], m_brdf.m_faces[i].m_point[2][2]);
 			glEnd();
 		}
 	}

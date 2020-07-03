@@ -310,19 +310,19 @@ void CBRDFdata::ScaleMesh()
 	{
 		for(int j=0; j<3; j++)
 		{
-			if(m_faces[i].m_point[j].m_x > maxX)
-				maxX = m_faces[i].m_point[j].m_x;
-			if(m_faces[i].m_point[j].m_y > maxY)
-				maxY = m_faces[i].m_point[j].m_y;
-			if(m_faces[i].m_point[j].m_z > maxZ)
-				maxZ = m_faces[i].m_point[j].m_z;
+            if(m_faces[i].m_point[j][0] > maxX)
+                maxX = m_faces[i].m_point[j][0];
+            if(m_faces[i].m_point[j][1] > maxY)
+                maxY = m_faces[i].m_point[j][1];
+            if(m_faces[i].m_point[j][2] > maxZ)
+                maxZ = m_faces[i].m_point[j][2];
 
-			if(m_faces[i].m_point[j].m_x < minX)
-				minX = m_faces[i].m_point[j].m_x;
-			if(m_faces[i].m_point[j].m_y < minY)
-				minY = m_faces[i].m_point[j].m_y;
-			if(m_faces[i].m_point[j].m_z < minZ)
-				minZ = m_faces[i].m_point[j].m_z;
+            if(m_faces[i].m_point[j][0] < minX)
+                minX = m_faces[i].m_point[j][0];
+            if(m_faces[i].m_point[j][1] < minY)
+                minY = m_faces[i].m_point[j][1];
+            if(m_faces[i].m_point[j][2] < minZ)
+                minZ = m_faces[i].m_point[j][2];
 		}
 	}
 
@@ -336,13 +336,13 @@ void CBRDFdata::ScaleMesh()
 	{
 		for(int j=0; j<3; j++)
 		{
-			m_faces[i].m_point[j].m_x /= diffX;
-			m_faces[i].m_point[j].m_y /= diffY;
-			m_faces[i].m_point[j].m_z /= diffZ;
+            m_faces[i].m_point[j][0] /= diffX;
+            m_faces[i].m_point[j][1] /= diffY;
+            m_faces[i].m_point[j][2] /= diffZ;
 
-			m_faces[i].m_point[j].m_x *= scaleFactor;
-			m_faces[i].m_point[j].m_y *= scaleFactor;
-			m_faces[i].m_point[j].m_z *= scaleFactor;
+            m_faces[i].m_point[j][0] *= scaleFactor;
+            m_faces[i].m_point[j][1] *= scaleFactor;
+            m_faces[i].m_point[j][2] *= scaleFactor;
 		}
 	}
 
@@ -368,9 +368,9 @@ void CBRDFdata::LoadModel(std::string filename)
 	m_vertices = new vertex[numVertices];
 	
     for(int i=0; i<numVertices; i++){
-        m_vertices[i].m_x = V(i,0);
-        m_vertices[i].m_y = V(i,1);
-        m_vertices[i].m_z = V(i,2);
+        m_vertices[i][0] = V(i,0);
+        m_vertices[i][1] = V(i,1);
+        m_vertices[i][2] = V(i,2);
     }
 
     int num_faces = F.rows();
@@ -400,13 +400,13 @@ void CBRDFdata::CalcFaceNormals()
 		vertex Q = m_faces[i].m_point[1];
 		vertex R = m_faces[i].m_point[2];
 
-		double a1 = Q.m_x - P.m_x;
-		double a2 = Q.m_y - P.m_y;
-		double a3 = Q.m_z - P.m_z;
+        double a1 = Q[0] - P[0];
+        double a2 = Q[1] - P[1];
+        double a3 = Q[2] - P[2];
 
-		double b1 = R.m_x - P.m_x;
-		double b2 = R.m_y - P.m_y;
-		double b3 = R.m_z - P.m_z;
+        double b1 = R[0] - P[0];
+        double b2 = R[1] - P[1];
+        double b3 = R[2] - P[2];
 
 		//Kreuzprodukt
 		double c1 = a2*b3 - a3*b2;
@@ -417,9 +417,9 @@ void CBRDFdata::CalcFaceNormals()
 
 		if(norm == 0.0) fail = true;
 
-		m_faces[i].m_normal.m_x = c1/norm;
-		m_faces[i].m_normal.m_y = c2/norm;
-		m_faces[i].m_normal.m_z = c3/norm;
+        m_faces[i].m_normal[0] = c1/norm;
+        m_faces[i].m_normal[1] = c2/norm;
+        m_faces[i].m_normal[2] = c3/norm;
 	}
 
 	if(fail)
@@ -559,9 +559,9 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 		
 		for (int j = 0; j < 3; j++) //get center of current triangle
 		{
-			objectX += m_faces[i].m_point[j].m_x;
-			objectY += m_faces[i].m_point[j].m_y;
-			objectZ += m_faces[i].m_point[j].m_z;
+            objectX += m_faces[i].m_point[j][0];
+            objectY += m_faces[i].m_point[j][1];
+            objectZ += m_faces[i].m_point[j][2];
 		}
 		
 		objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
@@ -602,16 +602,16 @@ void CBRDFdata::InitLEDs()
 		switch (i / 4)
 		{
 			case 0: 
-				m_led[i].m_y = 365.0 - 115.0;
+                m_led[i][1] = 365.0 - 115.0;
 				break;
 			case 1: 
-				m_led[i].m_y = 260.0 - 115.0;
+                m_led[i][1] = 260.0 - 115.0;
 				break;
 			case 2: 
-				m_led[i].m_y = 150.0 - 115.0;
+                m_led[i][1] = 150.0 - 115.0;
 				break;
 			default: 
-				m_led[i].m_y = 45.0 - 115.0;
+                m_led[i][1] = 45.0 - 115.0;
 				break;
 		}
 		
@@ -619,27 +619,27 @@ void CBRDFdata::InitLEDs()
 		switch (i % 4)
 		{
 		case 0:
-			m_led[i].m_x = 305.0 * sin(6.0/33.0*CV_PI*0.5);
-			m_led[i].m_z = 305.0 * cos(6.0/33.0*CV_PI*0.5);
+            m_led[i][0] = 305.0 * sin(6.0/33.0*CV_PI*0.5);
+            m_led[i][2] = 305.0 * cos(6.0/33.0*CV_PI*0.5);
 			break;
 		case 1:
-			m_led[i].m_x = 305.0 * sin(13.0/33.0*CV_PI*0.5);
-			m_led[i].m_z = 305.0 * cos(13.0/33.0*CV_PI*0.5);
+            m_led[i][0] = 305.0 * sin(13.0/33.0*CV_PI*0.5);
+            m_led[i][2] = 305.0 * cos(13.0/33.0*CV_PI*0.5);
 			break;
 		case 2:
-			m_led[i].m_x = 305.0 * sin(20.0/33.0*CV_PI*0.5);
-			m_led[i].m_z = 305.0 * cos(20.0/33.0*CV_PI*0.5);
+            m_led[i][0] = 305.0 * sin(20.0/33.0*CV_PI*0.5);
+            m_led[i][2] = 305.0 * cos(20.0/33.0*CV_PI*0.5);
 			break;
 		default:
-			m_led[i].m_x = 305.0 * sin(27.0/33.0*CV_PI*0.5);
-			m_led[i].m_z = 305.0 * cos(27.0/33.0*CV_PI*0.5);
+            m_led[i][0] = 305.0 * sin(27.0/33.0*CV_PI*0.5);
+            m_led[i][2] = 305.0 * cos(27.0/33.0*CV_PI*0.5);
 			break;
 		}
 	}
 
 	//for (int i = 0; i < m_numImages; i++)
 	//{
-	//	cout << i << ": x:" << m_led[i].m_x << " y:" << m_led[i].m_y << " z:" << m_led[i].m_z << endl;
+    //	cout << i << ": x:" << m_led[i][0] << " y:" << m_led[i][1] << " z:" << m_led[i][2] << endl;
 	//}
 }
 
@@ -660,9 +660,9 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		
 		for(int j = 0; j < 3; j++)
 		{
-			x += surface.m_point[j].m_x;
-			y += surface.m_point[j].m_y;
-			z += surface.m_point[j].m_z;
+            x += surface.m_point[j][0];
+            y += surface.m_point[j][1];
+            z += surface.m_point[j][2];
 		}
 		
 		x /= 3.0; y /= 3.0; z /= 3.0;
@@ -679,9 +679,9 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		Vz /= length;
 
 		//-1 * light vector, this orientation is needed for the formula below
-		double Lx = x - m_led[i].m_x;
-		double Ly = x - m_led[i].m_y;
-		double Lz = x - m_led[i].m_z;
+        double Lx = x - m_led[i][0];
+        double Ly = x - m_led[i][1];
+        double Lz = x - m_led[i][2];
 			
 		length = sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
 			
@@ -693,10 +693,10 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		//P = (N*L) * N
 		//R = -2 * (N*L) * N + L = -2 * P + L
 
-		double scale_factor = surface.m_normal.m_x * Lx + surface.m_normal.m_y * Ly + surface.m_normal.m_z * Lz;
-		double Px = scale_factor * surface.m_normal.m_x;
-		double Py = scale_factor * surface.m_normal.m_y;
-		double Pz = scale_factor * surface.m_normal.m_z;
+        double scale_factor = surface.m_normal[0] * Lx + surface.m_normal[1] * Ly + surface.m_normal[2] * Lz;
+        double Px = scale_factor * surface.m_normal[0];
+        double Py = scale_factor * surface.m_normal[1];
+        double Pz = scale_factor * surface.m_normal[2];
 
 		double Rx = Lx - 2*Px;
 		double Ry = Ly - 2*Py;
@@ -729,17 +729,17 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 		
 		for(int j = 0; j < 3; j++)
 		{
-			x += surface.m_point[j].m_x;
-			y += surface.m_point[j].m_y;
-			z += surface.m_point[j].m_z;
+            x += surface.m_point[j][0];
+            y += surface.m_point[j][1];
+            z += surface.m_point[j][2];
 		}
 		
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//light vector
-		double Lx = m_led[i].m_x - x;
-		double Ly = m_led[i].m_y - y;
-		double Lz = m_led[i].m_z - z;
+        double Lx = m_led[i][0] - x;
+        double Ly = m_led[i][1] - y;
+        double Lz = m_led[i][2] - z;
 			
 		double length = sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
 			
@@ -749,7 +749,7 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 			
 		//light vector * normal vector = phi
 		//it actually return cosPhi! but thats ok, we only need cosPhi!
-		double angle = Lx * surface.m_normal.m_x + Ly * surface.m_normal.m_y + Lz * surface.m_normal.m_z;
+        double angle = Lx * surface.m_normal[0] + Ly * surface.m_normal[1] + Lz * surface.m_normal[2];
 		//double actualAngle = acos(angle)*180.0/CV_PI;
         phi.at<double>(i) = angle;
 	}
@@ -774,17 +774,17 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 		
 		for(int j = 0; j < 3; j++)
 		{
-			x += surface.m_point[j].m_x;
-			y += surface.m_point[j].m_y;
-			z += surface.m_point[j].m_z;
+            x += surface.m_point[j][0];
+            y += surface.m_point[j][1];
+            z += surface.m_point[j][2];
 		}
 		
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//|light vector + observer vector| = half vector
-        double Hx = m_led[i].m_x - 2*x + m_p.at<double>(0);
-        double Hy = m_led[i].m_y - 2*y + m_p.at<double>(1);
-        double Hz = m_led[i].m_z - 2*z + m_p.at<double>(2);
+        double Hx = m_led[i][0] - 2*x + m_p.at<double>(0);
+        double Hy = m_led[i][1] - 2*y + m_p.at<double>(1);
+        double Hz = m_led[i][2] - 2*z + m_p.at<double>(2);
 			
 		double length = sqrt(Hx*Hx + Hy*Hy + Hz*Hz);
 			
@@ -794,7 +794,7 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 			
 		//half vector * normal vector = theta
 		//it actually return cosTheta'! but thats ok, we only need cosTheta'!
-		double angle = Hx * surface.m_normal.m_x + Hy * surface.m_normal.m_y + Hz * surface.m_normal.m_z;
+        double angle = Hx * surface.m_normal[0] + Hy * surface.m_normal[1] + Hz * surface.m_normal[2];
 		//double actualAngle = acos(angle)*180.0/CV_PI;
         theta_dash.at<double>(i) = angle;
 	}
