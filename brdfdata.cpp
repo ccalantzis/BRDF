@@ -37,7 +37,7 @@ bool CBRDFdata::LoadImages(std::string image_folder_path)
 	{
         std::string path = image_folder_path + std::to_string(i) + extension;
 
-        cv::Mat newImg = cv::imread(path);
+        cv::Mat newImg = cv::imread(path, cv::IMREAD_COLOR);
         if(newImg.empty())
 			return false;
 
@@ -357,51 +357,273 @@ double CBRDFdata::GetCY()
     return m_principal_point.at<double>(1);
 }
 
+//checking that the specified point is inside the voxel grid
+bool is_point_within_range(const Eigen::RowVector3d &point, const Eigen::RowVector3d &vg_min, const Eigen::RowVector3d &vg_max)
+{
+    for(int i = 0; i <3; ++i)
+    {
+        if(point(i) < vg_min(i) || point(i) > vg_max(i))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+Eigen::MatrixXd get_voxel_cubes(const Eigen::MatrixXd &cube_centres, const double &cube_side_length)
+{
+    Eigen::MatrixXd cube_V(cube_centres.rows()*2,3);
+    double chsl = cube_side_length/2;
+    for (int i = 0; i < cube_centres.rows(); ++i)
+    {
+        auto tcv = cube_centres.row(i); //centre of cube
+        cube_V.row(2*i) << tcv(0) - chsl, tcv(1) - chsl, tcv(2) - chsl;
+        cube_V.row(2*i + 1) << tcv(0) + chsl, tcv(1) + chsl, tcv(2) + chsl;
+    }
+    return cube_V;
+}
+
+int get_voxel_given_point(const Eigen::RowVector3d &point, const Eigen::RowVector3d &vg_min, const Eigen::RowVector3d &vg_max,
+                          const Eigen::Matrix<int, 1, 3> &side_lengths, const double &cube_side_length)
+{
+    if(!is_point_within_range(point, vg_min, vg_max)) return -1;
+    int sum1 = std::floor((std::abs((point(0))-vg_min(0)))/cube_side_length)+1;
+    int sum2 = side_lengths(0)*(std::floor((std::abs(point(1)-vg_min(1)))/cube_side_length));
+    int sum3 = side_lengths(0)*side_lengths(1)*(std::floor((std::abs(point(2)-vg_min(2)))/cube_side_length));
+    int voxel = sum1 + sum2 + sum3;
+    return voxel;
+}
+
+//this method takes a triangle and returns the voxels that the triangle is present in
+std::vector<int> triangle_to_voxels(const Eigen::Matrix<double,3,3> &triangle, const Eigen::RowVector3d vg_min,
+                                    const Eigen::RowVector3d vg_max, const Eigen::Matrix<int, 1, 3> &side_cubes,
+                                    const double &cube_side_length)
+{
+    std::vector<int> cubes;
+    //min and max coordinates of the triangle
+    Eigen::RowVector3d min = triangle.colwise().minCoeff();
+    Eigen::RowVector3d max = triangle.colwise().maxCoeff();
+    Eigen::RowVector3d max_xy_min_z;
+    max_xy_min_z << max(0), max(1), min(2);
+    int min_voxel = get_voxel_given_point(min, vg_min, vg_max, side_cubes, cube_side_length);
+    int max_voxel = get_voxel_given_point(max, vg_min, vg_max, side_cubes, cube_side_length);
+    int max_xy_min_z_voxel = get_voxel_given_point(max_xy_min_z, vg_min, vg_max, side_cubes, cube_side_length);
+    if(min_voxel == -1 || max_voxel == -1 || max_xy_min_z_voxel == -1)
+    {
+        std::cout << "triangle out of range\n";
+        std::vector<int> empty;
+        empty.push_back(-1);
+        return empty;
+    }
+    if(min_voxel != max_voxel){
+        int mult = std::floor((max_xy_min_z_voxel - min_voxel)/(side_cubes(0)));
+        int add = (max_xy_min_z_voxel - min_voxel)%side_cubes(0);
+        int z_mult = std::floor((max_voxel - min_voxel)/(side_cubes(0)*side_cubes(1)));
+        for(int i = 0; i <= z_mult; ++i){
+            for(int j = 0; j <= mult; ++j)
+            {
+                for(int k = 0; k <= add; ++k)
+                {
+                    cubes.push_back(min_voxel + j*side_cubes(0) + k + i*side_cubes(0)*side_cubes(1));
+                }
+            }
+        }
+    }
+    else
+    {
+        cubes.push_back(min_voxel);
+    }
+    return cubes;
+}
+
+//A vector of vectors where each vector represents a voxel and the values inside represent the triangles inside that voxel
+std::vector<std::vector<int>> voxel_to_triangle_mapping(const Eigen::MatrixXd &voxel_cubes, const Eigen::MatrixXd &V,
+                                                   const Eigen::MatrixXi &F, const Eigen::Matrix<int, 1, 3> &side_cubes,
+                                                   const double &cube_side_length)
+{
+    std::vector<std::vector<int>> mapping;
+    Eigen::RowVector3d vg_min = voxel_cubes.colwise().minCoeff();
+    Eigen::RowVector3d vg_max = voxel_cubes.colwise().maxCoeff();
+    for(int i = 0; i < side_cubes.prod(); ++i)
+    {
+        std::vector<int> v;
+        mapping.push_back(v);
+    }
+
+    for(int i = 0; i < F.rows(); ++i)
+    {
+        Eigen::Matrix<double,3,3> triangle;
+        triangle << V.row(F.row(i)(0)), V.row(F.row(i)(1)), V.row(F.row(i)(2));
+        std::vector<int> voxels = triangle_to_voxels(triangle, vg_min, vg_max, side_cubes, cube_side_length);
+        for(int voxel : voxels)
+        {
+            mapping[voxel].push_back(i);
+        }
+    }
+    return mapping;
+}
+
+//find the triangle that 'point' lies on, given the triangles in a voxel
+int get_triangle_given_point(const Eigen::RowVector3d &point, const std::vector<std::vector<int>> &mapping,
+                             const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &voxel_cubes,
+                             const Eigen::Matrix<int, 1, 3> &side_lengths, const double &cube_side_length)
+{
+    Eigen::MatrixXd point_d;
+    point_d = point;
+    Eigen::RowVector3d vg_min = voxel_cubes.colwise().minCoeff();
+    Eigen::RowVector3d vg_max = voxel_cubes.colwise().maxCoeff();
+    int voxel = get_voxel_given_point(point, vg_min, vg_max, side_lengths, cube_side_length);
+    if(voxel == -1) return 0;
+    std::vector<int> triangles = mapping[voxel];
+    for(int i = 0; i < triangles.size(); ++i)
+    {
+        int F_index = triangles[i];
+        Eigen::MatrixXd bc;
+        igl::barycentric_coordinates(point, V.row(F.row(F_index)(0)), V.row(F.row(F_index)(1)), V.row(F.row(F_index)(2)), bc);
+        if(bc(0) >=0 && bc(1) >= 0 && bc(2) >= 0)
+        {
+            Eigen::VectorXd sqrD;
+            Eigen::VectorXi I;
+            Eigen::MatrixXd C;
+            Eigen::Matrix<int,1,3> Fd;
+            Fd = F.row(F_index);
+            igl::point_mesh_squared_distance(point_d, V, Fd, sqrD, I, C);
+            if(sqrD.sum() < 1e-2)
+            {
+                return F_index;
+            }
+        }
+    }
+}
+
+//cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
+//{
+//    Eigen::MatrixXd GV;
+//    Eigen::Matrix<int,1,3> sides;
+//    int cubes_longest_side = 10;
+//    Eigen::AlignedBox<double, 3> box(m_vertices.colwise().minCoeff(), m_vertices.colwise().maxCoeff());
+//    igl::voxel_grid(box, cubes_longest_side, 0, GV, sides);
+//    double csl = (GV.row(0)-GV.row(1)).norm(); //cube side length
+//    std::cout << "csl: " << csl << '\n';
+//    auto voxel_cubes = get_voxel_cubes(GV, csl);
+//    std::vector<std::vector<int>> v_t_map = voxel_to_triangle_mapping(voxel_cubes, m_vertices, m_faces, sides, csl);
+//    std::cout << "v_t_map size: " << v_t_map.size() << '\n';
+
+//    Eigen::RowVector3d min_point = voxel_cubes.colwise().minCoeff();
+//    Eigen::RowVector3d max_point = voxel_cubes.colwise().maxCoeff();
+//    std::cout << "sides: " << sides << '\n';
+//    std::cout << "min_point: " << min_point << '\n';
+//    std::cout << "max_point: " << max_point << '\n';
+//    min_point = m_vertices.colwise().minCoeff();
+//    max_point = m_vertices.colwise().maxCoeff();
+//    std::cout << "min_point: " << min_point << '\n';
+//    std::cout << "max_point: " << max_point << '\n';
+
+//    cv::Mat map(m_height, m_width, CV_32S);
+//    map = cv::Scalar(0.0);
+
+//    for(int x=0; x < m_width; x++)
+//    {
+//        for(int y=0; y < m_height; y++)
+//        {
+//            GLdouble winX = 0.0;
+//            GLdouble winY = 0.0;
+//            GLdouble winZ = 0.0;
+
+//            GLdouble objX = 0.0;
+//            GLdouble objY = 0.0;
+//            GLdouble objZ = 0.0;
+
+//            GLdouble model_view[16];
+//            glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
+
+//            GLdouble projection[16];
+//            glGetDoublev(GL_PROJECTION_MATRIX, projection);
+
+//            GLint viewport[4];
+//            glGetIntegerv(GL_VIEWPORT, viewport);
+////            GLdouble z;
+////            glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_DOUBLE, &z);
+//            //std::cout << "z: " << z << '\n';
+////            double w = 1;
+////            Eigen::RowVector4d view_point;
+////            view_point << x,y,z,w;
+//            //int _ = gluUnProject(win_point(0), win_point(1), win_point(2), model_view, projection, viewport, &objX, &objY, &objZ);
+//            int _ = gluUnProject(x, y, 0.91, model_view, projection, viewport, &objX, &objY, &objZ);
+//            Eigen::RowVector3d point;
+//            point << objX, objY, objZ;
+//            int triangle = get_triangle_given_point(point, v_t_map, m_vertices, m_faces, voxel_cubes, sides, csl);
+////            map.at<int>(winY, winX) = triangle;
+//            std::cout << "object: " << objX << ", " << objY << ", " << objZ << '\n';
+//            std::cout << "window: " << x << ", " << y << ", " << 0.91 << '\n';
+//            std::cout << "triangle: " << triangle << '\n';
+
+////        GLdouble z;
+////        glReadPixels (viewX, viewY, 1, 1, GL_DEPTH_COMPONENT, GL_DOUBLE, &z);
+////        glm::vec4 viewport = glm::vec4(0, 0, m_width, m_height);
+////        glm::vec3 wincoord = glm::vec3(x, m_height - y - 1, z);
+////        glm::vec3 objcoord = glm::unProject(wincoord, view, projection, viewport);
+
+////        int error = gluUnProject(x, y, z, model_view, projection, viewport, &objX, &objY, &objZ);
+
+////        Eigen::RowVector3d point;
+////        point << objcoord.x, objcoord.y, objcoord.z;
+////        std::cout << point << '\n';
+////        int triangle = get_triangle_given_point(point, v_t_map, V, F, voxel_cubes, sides, csl);
+////        std::cout << triangle << '\n';
+////        cvSetReal2D(map, y, x, triangle);
+//        }
+//    }
+//}
+
 cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 {
     cv::Mat map(m_height, m_width, CV_32S);
     map = cv::Scalar(0.0);
 
-	//create map: pixel of image to surface on model(triangle?!) -> 0 means pixel not on model; val_x >0 means belongs to surface x
-	//return matrix has size of input image and contains zeros for all pixels that don't contain the object of interest, otherwise the number to
-	//the surface that pixel points
-	//this map should be the same for all images, so we only have to calc it ones
+    //create map: pixel of image to surface on model(triangle?!) -> 0 means pixel not on model; val_x >0 means belongs to surface x
+    //return matrix has size of input image and contains zeros for all pixels that don't contain the object of interest, otherwise the number to
+    //the surface that pixel points
+    //this map should be the same for all images, so we only have to calc it ones
 
     for(int i=0; i<m_faces.rows(); i++)
-	{
-		GLdouble winX = 0.0;
-		GLdouble winY = 0.0;
-		GLdouble winZ = 0.0;
+    {
+        GLdouble winX = 0.0;
+        GLdouble winY = 0.0;
+        GLdouble winZ = 0.0;
 
-		GLdouble objectX = 0.0;
-		GLdouble objectY = 0.0;
-		GLdouble objectZ = 0.0;
+        GLdouble objectX = 0.0;
+        GLdouble objectY = 0.0;
+        GLdouble objectZ = 0.0;
 		
-		for (int j = 0; j < 3; j++) //get center of current triangle
-		{
+        for (int j = 0; j < 3; j++) //get center of current triangle
+        {
             objectX += m_vertices(m_faces(i,j),0);
             objectY += m_vertices(m_faces(i,j),1);
             objectZ += m_vertices(m_faces(i,j),2);
-		}
+        }
 		
-		objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
+        objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
 
-		GLdouble model_view[16];
-		glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
+        GLdouble model_view[16];
+        glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
 
-		GLdouble projection[16];
-		glGetDoublev(GL_PROJECTION_MATRIX, projection);
+        GLdouble projection[16];
+        glGetDoublev(GL_PROJECTION_MATRIX, projection);
 
-		GLint viewport[4];
-		glGetIntegerv(GL_VIEWPORT, viewport);
+        GLint viewport[4];
+        glGetIntegerv(GL_VIEWPORT, viewport);
 
-		int errorValue = gluProject(objectX, objectY, objectZ, model_view, projection, viewport, &winX, &winY, &winZ);
+        int errorValue = gluProject(objectX, objectY, objectZ, model_view, projection, viewport, &winX, &winY, &winZ);
 
-		if(winY >=0 && winX >=0)
+        std::cout << "object: " << objectX << ", " << objectY << ", " << objectZ << '\n';
+        std::cout << "window: " << winX << ", " << winY << ", " << winZ << '\n';
+
+        if(winY >=0 && winX >=0)
             map.at<int>(winY, winX) = i;
-	}
+    }
 
-	return map;
+    return map;
 }
 
 void CBRDFdata::InitLEDs()
@@ -634,8 +856,8 @@ cv::Mat CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
 	int num = 0;
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
-        cv::Scalar i = (*it).at<double>((*it).size().height-1-y, x); //because ogl screen y-coordinate is inverted!
-		double currIntensity = i.val[colorChannel]/255.0;
+        cv::Scalar i = (*it).at<cv::Scalar>((*it).size().height-1-y, x); //because ogl screen y-coordinate is inverted!
+        double currIntensity = i.val[colorChannel]/255.0;
         I.at<double>(num++) = currIntensity;
 	}
 	return I;
@@ -755,7 +977,7 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 	unsigned int count_ks = 0;
 	unsigned int count_n = 0;
 
-	//for each pixel do:
+    //for each pixel do:
 	for(int x=0; x < m_width; x++)
 		for(int y=0; y < m_height; y++)
 		{
@@ -763,8 +985,8 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 
 			shizzle++;
 
-			if(currentSurface > 0) //pixel corresponds to a surface on the model
-			{				
+            if(currentSurface > 0) //pixel corresponds to a surface on the model
+            {
                 cv::Mat phi = GetCosLN(currentSurface);
                 cv::Mat thetaDash = GetCosNH(currentSurface);
                 cv::Mat theta = GetCosRV(currentSurface);
@@ -801,9 +1023,9 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 			}
 
 			//progress display
-			double percent = (double)shizzle*100.0 / (double)(m_width*m_height);
-			if ((int)shizzle % 100 == 0)
-                std::cout << (int)percent << "% done\r";
+//			double percent = (double)shizzle*100.0 / (double)(m_width*m_height);
+//			if ((int)shizzle % 100 == 0)
+//                std::cout << (int)percent << "% done\r";
 		}
 
     std::cout << "100% done\n";
