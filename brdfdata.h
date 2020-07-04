@@ -11,7 +11,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <Eigen/Dense>
 
-using namespace std;
 typedef Eigen::RowVector3d vertex;
 typedef Eigen::Matrix<double,3,3> triangle;
 
@@ -28,7 +27,7 @@ class CBRDFdata
 private:
 
 	int m_numImages;
-    vector<cv::Mat> m_images;
+    std::vector<cv::Mat> m_images;
     int m_height; //resolution of the input images
 	int m_width; //resolution of the input images
     cv::Mat m_dark;
@@ -40,8 +39,6 @@ private:
     cv::Mat m_a;
     cv::Mat m_p;
     cv::Mat m_ledPositions;
-    //vertex* m_vertices;
-    //vertex* m_led;
 
 public:
 	int m_model; //0: Phong, 1: Blinn-Phong
@@ -68,20 +65,17 @@ public:
 		//o steht senkrecht auf a
 		//n steht senkrecht auf a
         m_ledPositions = cv::Mat(16, 3, CV_32F);
-//		m_vertices = NULL;
-//		m_faces = NULL;
-//		m_led = NULL;
 	};
 
 	//~CBRDFdata();
 
 	bool Cleanup();
-	bool LoadImages();
+    bool LoadImages(std::string image_folder_path);
 	void NormaliseImages();
 	void PrintImages();
 	void PrintNormalisedImages();
 	void SubtractAmbientLight();
-	bool LoadDarkImage();
+    bool LoadDarkImage(std::string image_folder_path);
 	void LoadCameraParameters(std::string filename);
 	bool ReadInFile(std::string filename, std::vector<char>* buffer);
 	void WriteValue(std::string parameter, std::string value);
@@ -95,10 +89,6 @@ public:
     cv::Mat SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, cv::Mat I);
     void SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel);
 	bool ReadInFileAsLines(std::string filename, std::vector<char*>* buffer);
-	int GetNumVertices(vector<char*>* linesInFile);
-	void WriteVertices(vector<char*>* linesInFile);
-	int GetNumFaces(vector<char*>* linesInFile);
-	void WriteFaces(vector<char*>* linesInFile);
     Eigen::MatrixXd CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
     void ScaleMesh();
     cv::Mat GetCameraOrigin();

@@ -18,8 +18,6 @@
 
 void Render(CBRDFdata* data, int argc, char** argv);
 
-using namespace std;
-
 CBRDFdata m_brdf;
 int m_width = 800;
 int m_height = 600;
@@ -30,28 +28,31 @@ int main(int argc, char** argv)
 	//data structure for brdf
 	m_brdf = CBRDFdata();
 
-	cout << "loading data.." << endl;
+    std::string image_folder_path = argv[1];
+    std::string obj_path = argv[2];
+    std::string cal_path = argv[3];
+
 	//read in 3d model + calc surface normals
-    m_brdf.LoadModel("img/timber/timber.obj");
+    m_brdf.LoadModel(obj_path);
 	m_brdf.m_model = 1; //0: Phong, 1: Blinn-Phong
 
 	//read in 16 images
 	//assuming images are named 1.jpg to 16.jpg
-	m_brdf.LoadImages();
-	m_brdf.LoadDarkImage();
+    m_brdf.LoadImages(image_folder_path);
+    m_brdf.LoadDarkImage(image_folder_path);
 	m_brdf.SubtractAmbientLight(); //not really important, but correct
 
 	//optional output
 	//m_brdf.PrintNormalisedImages();
 	
 	//read in geometry and camera infos
-    m_brdf.LoadCameraParameters("img/timber/timber.cal");
+    m_brdf.LoadCameraParameters(cal_path);
 
 	//initialise led positions
 	m_brdf.InitLEDs();
 	//render model
-	cout << "begin rendering" << endl;
-	Render(&m_brdf, argc, argv);
+    std::cout << "begin rendering" << '\n';
+    Render(&m_brdf, argc, argv);
 
 	//cvWaitKey(0);
 

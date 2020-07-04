@@ -37,8 +37,6 @@ int m_frame = 0;
 
 cv::Mat m_pixelMap;
 
-using namespace std;
-
 bool m_calcNow = false;
 bool m_defaultView = true;
 bool m_calcedOnce = false;
@@ -142,10 +140,10 @@ static uint32_t GetTickCount()
 
 void InitShader()
 {	
-    string line;
-    string file;
+    std::string line;
+    std::string file;
 
-    ifstream myfile ("fragmentShader.sl");
+    std::ifstream myfile ("fragmentShader.sl");
 
     if (myfile.is_open())
     {
@@ -672,13 +670,13 @@ void Display_(void)
 	if(m_calcNow)
 	{
 		//map each pixel with surface on object
-		cout << "map pixels to 3d model" << endl;
+        std::cout << "map pixels to 3d model" << std::endl;
 		m_pixelMap = m_brdf.CalcPixel2SurfaceMapping();
 
 		//calc the actual BRDF
-		cout << "begin calculation" << endl;
+        std::cout << "begin calculation" << std::endl;
 		m_brdf.CalcBRDFEquation(m_pixelMap);
-		cout << "done calculation" << endl;
+        std::cout << "done calculation" << std::endl;
 
 		m_calcedOnce = true;
 		m_calcNow = false;

@@ -28,20 +28,15 @@
 #include <opencv2/core/mat.inl.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-bool CBRDFdata::LoadImages()
+bool CBRDFdata::LoadImages(std::string image_folder_path)
 {
 	m_images.clear();
-	for(int i=0; i<m_numImages; i++)
-	{
-        string path = "img/timber/";
-		char num[4];
-		snprintf(num, sizeof(num), "%d", i+1);
-		string extension = ".png";
-		
-		path += num;
-		path += extension;
+    std::string extension = ".png";
 
-        //IplImage* newImg = cvLoadImage(path.c_str(), CV_LOAD_IMAGE_COLOR);
+    for(int i=1; i<=m_numImages; i++)
+	{
+        std::string path = image_folder_path + std::to_string(i) + extension;
+
         cv::Mat newImg = cv::imread(path);
         if(newImg.empty())
 			return false;
@@ -61,9 +56,9 @@ bool CBRDFdata::LoadImages()
 void CBRDFdata::PrintImages()
 {
 	int i=0;
-    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
+    for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
     {
-		string name = "image: ";
+        std::string name = "image: ";
 		char num[4];
 		snprintf(num, sizeof(num), "%d", i+1);
 		name += num;
@@ -114,9 +109,9 @@ void CBRDFdata::PrintImages()
 void CBRDFdata::PrintNormalisedImages()
 {
 	int i=0;
-    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
+    for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
     {
-		string name = "normed image: ";
+        std::string name = "normed image: ";
 		char num[4];
 		snprintf(num, sizeof(num)," %d", i+1);
 		name += num;
@@ -126,14 +121,9 @@ void CBRDFdata::PrintNormalisedImages()
 	}
 }
 
-bool CBRDFdata::LoadDarkImage()
+bool CBRDFdata::LoadDarkImage(std::string image_folder_path)
 {
-    string path = "img/timber/";
-	string name = "dark";
-	string extension = ".png";
-		
-	path += name;
-	path += extension;
+    std::string path = image_folder_path + "dark.png";
 
     m_dark = cv::imread(path);
     if(m_dark.dims == 0)
@@ -147,7 +137,7 @@ void CBRDFdata::SubtractAmbientLight()
     if(m_dark.empty())
 		return;
 	
-    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
+    for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
         cv::subtract((*it), m_dark, (*it));
 	}
@@ -165,12 +155,12 @@ void CBRDFdata::LoadCameraParameters(std::string filename)
 		if(curr == '<')
 		{
 			it++;
-			string currentParameter = "";
+            std::string currentParameter = "";
 			for(; it != buffer.end() && (*it) != '>'; ++it) //read in parameter name
 			{
 				currentParameter += (*it);
 			}
-			string currentValue = "";
+            std::string currentValue = "";
 			if((*it) == '>') //parameter detected
 				it++;
 
@@ -253,7 +243,7 @@ bool CBRDFdata::ReadInFile(std::string filename, std::vector<char>* buffer)
 	buffer->clear();
 
 	std::ifstream file;
-	file.open(filename, std::ios::in | ios::binary);
+    file.open(filename, std::ios::in | std::ios::binary);
 
 	if(!file.fail())
 	{ 
@@ -296,9 +286,6 @@ void CBRDFdata::ScaleMesh()
 void CBRDFdata::LoadModel(std::string filename)
 {
 	//load 3d mesh from file
-	//calc surface normals of object, if not already done..
-	//give every surface a number, if they don't already have one(needed for later mapping with pixels) -> number of index
-	//choose appropriate data structure, remember: we need to be able to store the BRDF infos as well for each surface/triangle
 
     igl::readOBJ(filename, m_vertices, m_faces);
 
@@ -327,76 +314,6 @@ Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen
         FN.row(rowCount_F) = face_normal;
     }
     return FN;
-}
-
-int CBRDFdata::GetNumFaces(vector<char*>* linesInFile)
-{
-	int numFaces = 0;
-
-	//go to first occurance of f
-	std::vector<char*>::iterator it;
-	for(it = linesInFile->begin(); it != linesInFile->end() && (*it != NULL); it++)
-	{
-		if((*it)[0] == 'f')
-			break;
-	}
-	std::string currLine = (*it);
-	for(; it != linesInFile->end() && (*it != NULL); it++)
-	{
-		if((*it)[0] != 'f')
-		{
-			break;
-		}
-	}
-	currLine = (*it);
-	if((*it)[0] == '#')
-	{
-		std::string numVertices = "";
-		for(int i=0; i<strlen(*it); i++)
-		{
-			if((*it)[i] > 47 && (*it)[i] < 58)
-				numVertices += (*it)[i];
-		}
-		numFaces = atoi(numVertices.c_str());
-	}
-
-	return numFaces;
-}
-
-int CBRDFdata::GetNumVertices(vector<char*>* linesInFile)
-{
-	int numVerts = 0;
-	//go to first occurance of v 
-	std::vector<char*>::iterator it;
-	for(it = linesInFile->begin(); it != linesInFile->end() && (*it != NULL); it++)
-	{
-		if((*it)[0] == 'v')
-		{
-			break;
-		}
-	}
-	std::string currLine = (*it);
-	for(; it != linesInFile->end() && (*it != NULL); it++)
-	{
-		if((*it)[0] != 'v')
-		{
-			break;
-		}
-	}
-	currLine = (*it);
-	if((*it)[0] == '#')
-	{
-		std::string numVertices = "";
-		for(int i=0; i<strlen(*it); i++)
-		{
-			if((*it)[i] > 47 && (*it)[i] < 58)
-				numVertices += (*it)[i];
-		}
-		numVerts = atoi(numVertices.c_str());
-	}
-	
-
-	return numVerts;
 }
 
 void CBRDFdata::SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel) //BGR
@@ -539,11 +456,6 @@ void CBRDFdata::InitLEDs()
 			break;
 		}
 	}
-
-	//for (int i = 0; i < m_numImages; i++)
-	//{
-    //	cout << i << ": x:" << m_led[i][0] << " y:" << m_led[i][1] << " z:" << m_led[i][2] << endl;
-	//}
 }
 
 cv::Mat CBRDFdata::GetCosRV(int currentSurface)
@@ -720,7 +632,7 @@ cv::Mat CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
 	//matrix I contains image Intensities for iamge1 position 0 and intensity for image16 in position 15(m_numImages-1)
 	//this function just gets the values of one color channel!
 	int num = 0;
-    for(vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
+    for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
         cv::Scalar i = (*it).at<double>((*it).size().height-1-y, x); //because ogl screen y-coordinate is inverted!
 		double currIntensity = i.val[colorChannel]/255.0;
@@ -808,7 +720,7 @@ cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, 
 
 	int error = dlevmar_dif(BRDFFunc, p, x, m, n, itmax, opts, info, NULL, NULL, data);
 	if(error == -1)
-		cout << "Error in SolveEquation(..)" << endl;
+        std::cout << "Error in SolveEquation(..)" << '\n';
 
 //#ifdef _DEBUG
 //
@@ -853,12 +765,9 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 
 			if(currentSurface > 0) //pixel corresponds to a surface on the model
 			{				
-                cv::Mat phi(1, m_numImages, CV_64F);
-                phi = GetCosLN(currentSurface);
-                cv::Mat thetaDash(1, m_numImages, CV_64F);
-                thetaDash = GetCosNH(currentSurface);
-                cv::Mat theta(1, m_numImages, CV_64F);
-                theta = GetCosRV(currentSurface);
+                cv::Mat phi = GetCosLN(currentSurface);
+                cv::Mat thetaDash = GetCosNH(currentSurface);
+                cv::Mat theta = GetCosRV(currentSurface);
 				for(int colorChannel=0; colorChannel<3; colorChannel++) //do the calculation once for each color-channel
 				{
 					//build vector I
@@ -894,14 +803,14 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 			//progress display
 			double percent = (double)shizzle*100.0 / (double)(m_width*m_height);
 			if ((int)shizzle % 100 == 0)
-				cout << (int)percent << "% done\r";
+                std::cout << (int)percent << "% done\r";
 		}
 
-	cout << "100% done\n";
+    std::cout << "100% done\n";
 
 	//output statistics about brdf values:
 
-	cout << /*"kd_min: " << min_kd << ", kd_max: " << max_kd << */", kd_avg: " << avg_kd/count_kd << endl;
-	cout << /*"ks_min: " << min_ks << ", ks_max: " << max_ks << */", ks_avg: " << avg_ks/count_ks << endl;
-	cout << /*"n_min: " << min_n << ", n_max: " << max_n  << */", n_avg: " << avg_n/count_n << endl;
+    std::cout << /*"kd_min: " << min_kd << ", kd_max: " << max_kd << */", kd_avg: " << avg_kd/count_kd << '\n';
+    std::cout << /*"ks_min: " << min_ks << ", ks_max: " << max_ks << */", ks_avg: " << avg_ks/count_ks << '\n';
+    std::cout << /*"n_min: " << min_n << ", n_max: " << max_n  << */", n_avg: " << avg_n/count_n << '\n';
 }
