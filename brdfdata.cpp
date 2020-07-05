@@ -37,12 +37,23 @@ bool CBRDFdata::LoadImages(std::string image_folder_path)
 	{
         std::string path = image_folder_path + std::to_string(i) + extension;
 
-        cv::Mat newImg = cv::imread(path, cv::IMREAD_COLOR);
+        cv::Mat newImg;
+        newImg = cv::imread(path, cv::IMREAD_COLOR);
+        cv::Vec3b intensity = newImg.at<cv::Vec3b>(100, 300);
+        float blue = intensity.val[0];
+        float green = intensity.val[1];
+        float red = intensity.val[2];
+        std::cout << blue << '\n';
+        std::cout << green << '\n';
+        std::cout << red << '\n';
+//        int pixelValue = (int)newImg.at<uchar>(300,100);
+//        std::cout << pixelValue << '\n';
+//        std::cout << newImg.at<cv::Scalar>(300,100).val[0] << '\n';
         if(newImg.empty())
 			return false;
 
 		if(m_width <= -1 || m_height <= -1)
-		{
+        {
             m_width = newImg.size().width;
             m_height = newImg.size().height;
 		}
@@ -272,7 +283,7 @@ void CBRDFdata::ScaleMesh()
 
     //in the original code they used 10. But they weren't calculating the min and max values correctly.
     //the min might not be less than 0, guys. and on that note, the max might not be greater than 0.
-    double scaleFactor = 8.0;
+    double scaleFactor = 8.65;
 
     m_vertices.col(0) /= diffX;
     m_vertices.col(1) /= diffY;
@@ -284,6 +295,7 @@ void CBRDFdata::ScaleMesh()
 }
 
 void CBRDFdata::LoadModel(std::string filename)
+
 {
 	//load 3d mesh from file
 
@@ -856,8 +868,8 @@ cv::Mat CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
 	int num = 0;
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
-        cv::Scalar i = (*it).at<cv::Scalar>((*it).size().height-1-y, x); //because ogl screen y-coordinate is inverted!
-        double currIntensity = i.val[colorChannel]/255.0;
+        cv::Vec3b intensity = (*it).at<cv::Vec3b>((*it).size().height-1-y, x);
+        double currIntensity = intensity.val[colorChannel]/255.0;
         I.at<double>(num++) = currIntensity;
 	}
 	return I;
@@ -976,7 +988,7 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 	unsigned int count_kd = 0;
 	unsigned int count_ks = 0;
 	unsigned int count_n = 0;
-
+    bool a =false;
     //for each pixel do:
 	for(int x=0; x < m_width; x++)
 		for(int y=0; y < m_height; y++)
@@ -987,6 +999,9 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 
             if(currentSurface > 0) //pixel corresponds to a surface on the model
             {
+                a=true;
+                std::cout << "x: " << x << '\n';
+                std::cout << "y: " << y << '\n';
                 cv::Mat phi = GetCosLN(currentSurface);
                 cv::Mat thetaDash = GetCosNH(currentSurface);
                 cv::Mat theta = GetCosRV(currentSurface);

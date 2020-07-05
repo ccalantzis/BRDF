@@ -400,6 +400,9 @@ void DrawMesh()
                 double cosNH = m_brdf.face_normals(i,0) * h[0] + m_brdf.face_normals(i,1) * h[1] + m_brdf.face_normals(i,2) * h[2];
 
 				//Blinn-Phong colors
+                auto test1 = m_brdf.brdf_surfaces(i,0).kd;
+                auto test2 = m_brdf.brdf_surfaces(i,0).ks;
+                auto test3 = m_brdf.brdf_surfaces(i,0).n;
                 brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
                 brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
                 brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
