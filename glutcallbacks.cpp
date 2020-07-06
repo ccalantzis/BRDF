@@ -344,7 +344,8 @@ void DrawMesh()
             //TODO: auslagern auf grafikkarte(in den fragment shader)
 
             //get the light source position of source 0
-            GLfloat lpos[] = {m_eyeX, m_eyeY, m_eyeZ}; //same like the camera position)
+            Eigen::RowVector3d lpos;
+            lpos << m_eyeX, m_eyeY, m_eyeZ; //same like the camera position)
 
             //get center of current triangle
             GLdouble objectX = 0.0;
@@ -361,31 +362,19 @@ void DrawMesh()
             objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
 
             //calc the light direction
-            GLdouble lightDir[] = {lpos[0] - objectX, lpos[1] - objectY, lpos[2] - objectZ};
-
-            //normalize the light direction vector
-            float norm = sqrt(pow(lightDir[0], 2) + pow(lightDir[1], 2) + pow(lightDir[2], 2));
-            lightDir[0] /= norm;
-            lightDir[1] /= norm;
-            lightDir[2] /= norm;
+            Eigen::RowVector3d lightDir;
+            lightDir << lpos[0] - objectX, lpos[1] - objectY, lpos[2] - objectZ;
+            lightDir.normalize();
 
             //camera direction
-            GLdouble viewDir[] = {m_eyeX - m_centerX, m_eyeY - m_centerY, m_eyeZ - m_centerZ};
-
-            //normalize the camera direction vector
-            norm = sqrt(pow(viewDir[0], 2) + pow(viewDir[1], 2) + pow(viewDir[2], 2));
-            viewDir[0] /= norm;
-            viewDir[1] /= norm;
-            viewDir[2] /= norm;
+            Eigen::RowVector3d viewDir;
+            viewDir << m_eyeX - m_centerX, m_eyeY - m_centerY, m_eyeZ - m_centerZ;
+            viewDir.normalize();
 
             //calc the half vector between light source vector and view vector
-            GLdouble h[] = {lightDir[0] + viewDir[0], lightDir[1] + viewDir[1], lightDir[2] + viewDir[2]};
-
-            //normalize the half vector
-            norm = sqrt(pow(h[0], 2) + pow(h[1], 2) + pow(h[2], 2));
-            h[0] /= norm;
-            h[1] /= norm;
-            h[2] /= norm;
+            Eigen::RowVector3d h;
+            h << lightDir[0] + viewDir[0], lightDir[1] + viewDir[1], lightDir[2] + viewDir[2];
+            h.normalize();
 
             //calc cos(phi) = dot(normal, lightvector)
             double cosLN = m_brdf.face_normals(i,m_brdf.face_normals(i,0) * lightDir[0] + m_brdf.face_normals(i,1) * lightDir[1] + m_brdf.face_normals(i,2) * lightDir[2]);
@@ -403,10 +392,6 @@ void DrawMesh()
                 brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
                 brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
                 brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
-                if(brdfB < 0.01 && brdfG < 0.01 && brdfR > 0.9)
-                {
-                    std::cout << "stop";
-                }
             }
             else if(m_brdf.m_model == 0) //PHONG!
             {
@@ -627,10 +612,10 @@ void DrawString(std::string str, int x, int y, float color[4], void *font)
 	glRasterPos3i(x, y, 1);     //set text position
 
 	//loop through all characters in the string
-	for(int i = 0; i < str.size(); i++)
-	{
-		glutBitmapCharacter(font, (char)str[i]);
-	}
+    for(auto i = str.begin(); i  != str.end(); ++i)
+    {
+        glutBitmapCharacter(font, *i);
+    }
 
 	glEnable(GL_TEXTURE_2D);
 }

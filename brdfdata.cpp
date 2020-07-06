@@ -268,9 +268,9 @@ void CBRDFdata::ScaleMesh()
     Eigen::RowVector3d max_vertex = m_vertices.colwise().maxCoeff();
     Eigen::RowVector3d min_vertex = m_vertices.colwise().minCoeff();
 
-    double diffX = max_vertex(0) - min_vertex(0);
-    double diffY = max_vertex(1) - min_vertex(1);
-    double diffZ = max_vertex(2) - min_vertex(2);
+    double diffX = std::abs(max_vertex(0) - min_vertex(0));
+    double diffY = std::abs(max_vertex(1) - min_vertex(1));
+    double diffZ = std::abs(max_vertex(2) - min_vertex(2));
 
     //in the original code they used 10. But they weren't calculating the min and max values correctly.
     //the min might not be less than 0, guys. and on that note, the max might not be greater than 0.
@@ -749,44 +749,28 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//observer vector
-        double Vx = m_p.at<double>(0) - x;
-        double Vy = m_p.at<double>(1) - y;
-        double Vz = m_p.at<double>(2) - z;
-
-		double length = sqrt(Vx*Vx + Vy*Vy + Vz*Vz);
-
-		Vx /= length;
-		Vy /= length;
-		Vz /= length;
+        Eigen::RowVector3d viewDir;
+        viewDir << m_p.at<double>(0) - x, m_p.at<double>(1) - y, m_p.at<double>(2) - z;
+        viewDir.normalize();
 
 		//-1 * light vector, this orientation is needed for the formula below
-        double Lx = x - m_led(i,0);
-        double Ly = x - m_led(i,1);
-        double Lz = x - m_led(i,2);
-			
-		length = sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
-			
-		Lx /= length;
-		Ly /= length;
-		Lz /= length;
-		
+        Eigen::RowVector3d lightDir;
+        lightDir << x - m_led(i,0), x - m_led(i,1), x - m_led(i,2);
+        lightDir.normalize();
+
 		//need reflexion vector, see http://wiki.delphigl.com/index.php/Reflexion
-		//P = (N*L) * N
-		//R = -2 * (N*L) * N + L = -2 * P + L
+        double scale_factor = face_normals.row(currentSurface).cwiseProduct(lightDir).sum();
 
-        double scale_factor = face_normals(currentSurface,0) * Lx + face_normals(currentSurface,1) * Ly + face_normals(currentSurface,2) * Lz;
-        double Px = scale_factor * face_normals(currentSurface,0);
-        double Py = scale_factor * face_normals(currentSurface,1);
-        double Pz = scale_factor * face_normals(currentSurface,2);
+        Eigen::RowVector3d P;
+        P = scale_factor * face_normals.row(currentSurface);
 
-		double Rx = Lx - 2*Px;
-		double Ry = Ly - 2*Py;
-		double Rz = Lz - 2*Pz;
+        Eigen::RowVector3d R;
+        R = lightDir - 2*P;
 
 		//reflexion vector * observer vector = theta
 		//it actually return cosTheta! but thats ok, we only need cosTheta!
-		double angle = Rx * Vx + Ry * Vy + Rz * Vz;
-		//double actualAngle = acos(angle)*180.0/CV_PI;
+        double angle = R.cwiseProduct(P).sum();
+        //double actualAngle = acos(angle)*180.0/CV_PI;
         theta.at<double>(i) = angle;
 	}
 
@@ -821,19 +805,13 @@ cv::Mat CBRDFdata::GetCosLN(int currentSurface)
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//light vector
-        double Lx = m_led(i,0) - x;
-        double Ly = m_led(i,1) - y;
-        double Lz = m_led(i,2) - z;
-			
-		double length = sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
-			
-		Lx /= length;
-		Ly /= length;
-		Lz /= length;
+        Eigen::RowVector3d lightDir;
+        lightDir << m_led(i,0) - x, m_led(i,1) - y, m_led(i,2) - z;
+        lightDir.normalize();
 			
 		//light vector * normal vector = phi
 		//it actually return cosPhi! but thats ok, we only need cosPhi!
-        double angle = Lx * face_normals(currentSurface,0) + Ly * face_normals(currentSurface,1) + Lz * face_normals(currentSurface,2);
+        double angle = lightDir.cwiseProduct(face_normals.row(currentSurface)).sum();
         //double actualAngle = acos(angle)*180.0/CV_PI;
         phi.at<double>(i) = angle;
 	}
@@ -869,19 +847,13 @@ cv::Mat CBRDFdata::GetCosNH(int currentSurface)
 		x /= 3.0; y /= 3.0; z /= 3.0;
 
 		//|light vector + observer vector| = half vector
-        double Hx = m_led(i,0) - 2*x + m_p.at<double>(0);
-        double Hy = m_led(i,1) - 2*y + m_p.at<double>(1);
-        double Hz = m_led(i,2) - 2*z + m_p.at<double>(2);
-			
-		double length = sqrt(Hx*Hx + Hy*Hy + Hz*Hz);
-			
-		Hx /= length;
-		Hy /= length;
-		Hz /= length;
+        Eigen::RowVector3d H;
+        H <<  m_led(i,0) - 2*x + m_p.at<double>(0), m_led(i,1) - 2*y + m_p.at<double>(1), m_led(i,2) - 2*z + m_p.at<double>(2);
+        H.normalize();
 			
 		//half vector * normal vector = theta
         //it actually return cosTheta'! but thats ok, we only need cosTheta'!
-        double angle = Hx * face_normals(currentSurface,0) + Hy * face_normals(currentSurface,1) + Hz * face_normals(currentSurface,2);
+        double angle = H.cwiseProduct(face_normals.row(currentSurface)).sum();
         //double actualAngle = acos(angle)*180.0/CV_PI;
         theta_dash.at<double>(i) = angle;
 	}
@@ -974,7 +946,7 @@ cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, 
 
 	int m = 3; //parameters
 	int n = m_numImages; //measurements
-    int itmax = 2000;
+    int itmax = 100;
 	double opts[LM_OPTS_SZ];
 	double info[LM_INFO_SZ];
     double lower[] = {0,0,0};
@@ -990,7 +962,7 @@ cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, 
         std::cout << "Error in SolveEquation(..)" << '\n';
 
 //    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g]" << '\n';
-    std::cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << ", " << '\n';
+//    std::cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << '\n';
 
     brdf.at<double>(0) = p[0];
     brdf.at<double>(1) = p[1];
