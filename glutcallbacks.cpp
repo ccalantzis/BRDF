@@ -372,13 +372,11 @@ void DrawMesh()
             viewDir.normalize();
 
             //calc the half vector between light source vector and view vector
-            Eigen::RowVector3d h;
-            h << lightDir[0] + viewDir[0], lightDir[1] + viewDir[1], lightDir[2] + viewDir[2];
+            Eigen::RowVector3d h = lightDir + viewDir;
             h.normalize();
 
             //calc cos(phi) = dot(normal, lightvector)
-            double cosLN = m_brdf.face_normals(i,m_brdf.face_normals(i,0) * lightDir[0] + m_brdf.face_normals(i,1) * lightDir[1] + m_brdf.face_normals(i,2) * lightDir[2]);
-
+            double cosLN = m_brdf.face_normals(i, m_brdf.face_normals.row(i).cwiseProduct(lightDir).sum());
             double brdfB = 0.0;
             double brdfG = 0.0;
             double brdfR = 0.0;
@@ -386,7 +384,7 @@ void DrawMesh()
             if(m_brdf.m_model == 1) //BLINN-PHONG!
             {
                 //calc cos(thetaDash) = dot(normal, h)
-                double cosNH = m_brdf.face_normals(i,0) * h[0] + m_brdf.face_normals(i,1) * h[1] + m_brdf.face_normals(i,2) * h[2];
+                double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
 
                 //Blinn-Phong colors
                 brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
@@ -398,10 +396,10 @@ void DrawMesh()
 
                 //calc
                 GLdouble scale_factor = m_brdf.face_normals(i,0) * lightDir[0] +m_brdf.face_normals(i,1) * lightDir[1] + m_brdf.face_normals(i,2) * lightDir[2];
-                GLdouble P[] = {-scale_factor * m_brdf.face_normals(i,0), -scale_factor * m_brdf.face_normals(i,1), -scale_factor * m_brdf.face_normals(i,2)};
-                GLdouble R[] = {-lightDir[0] - 2*P[0], -lightDir[1] - 2*P[1], -lightDir[2] - 2*P[2]};
+                Eigen::RowVector3d P = -scale_factor * m_brdf.face_normals.row(i);
+                Eigen::RowVector3d R = lightDir - 2*P;
                 //calc cos(theta) = dot(R, viewDir)
-                float cosRV = viewDir[0] * R[0] + viewDir[1] * R[1] + viewDir[2] * R[2];
+                float cosRV = viewDir.cwiseProduct(R).sum();
 
                 //Phong colors
                 brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * ((m_brdf.brdf_surfaces(i,0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,0).n));
