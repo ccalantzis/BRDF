@@ -39,8 +39,10 @@ int main(int argc, char** argv)
 	//read in 16 images
 	//assuming images are named 1.jpg to 16.jpg
     m_brdf.LoadImages(image_folder_path);
+    m_brdf.PrintImages();
     m_brdf.LoadDarkImage(image_folder_path);
-	m_brdf.SubtractAmbientLight(); //not really important, but correct
+    //subtract ambient light is a bit broken
+    //m_brdf.SubtractAmbientLight(image_folder_path); //not really important, but correct
 
 	//optional output
 	//m_brdf.PrintNormalisedImages();
@@ -69,6 +71,9 @@ void Render(CBRDFdata* data, int argc, char** argv)
 	//show model, in correct relation to origin
 	//show camera position
 
+    // initialize OpenGL (see glutcallbacks.c)
+    Init();
+
 	//let user rotate and translate around
 
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_MULTISAMPLE);
@@ -79,8 +84,7 @@ void Render(CBRDFdata* data, int argc, char** argv)
 
     // register GLUT callbacks (see glutcallbacks.c)
     RegisterCallbacks();
-    // initialize OpenGL (see glutcallbacks.c)
-    Init();
+
     // start GLUT event loop
     glutMainLoop();
 }

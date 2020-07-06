@@ -21,6 +21,8 @@
 #include <vector>
 #include <igl/point_mesh_squared_distance.h>
 #include <igl/voxel_grid.h>
+#include <map>
+#include <boost/assign/list_of.hpp>
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgcodecs/imgcodecs.hpp>
@@ -73,9 +75,9 @@ void CBRDFdata::PrintImages()
 		char num[4];
 		snprintf(num, sizeof(num), "%d", i+1);
 		name += num;
-        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
-        cv::imshow(name.c_str(), (*it));
-		cv::waitKey(0);
+//        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
+//        cv::imshow(name.c_str(), (*it));
+//        cv::waitKey(0);
     }
 }
 
@@ -117,41 +119,30 @@ void CBRDFdata::PrintImages()
 //    }
 //}
 
-void CBRDFdata::PrintNormalisedImages()
-{
-	int i=0;
-    for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
-    {
-        std::string name = "normed image: ";
-		char num[4];
-		snprintf(num, sizeof(num)," %d", i+1);
-		name += num;
-        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
-        cv::imshow(name.c_str(), (*it));
-		cv::waitKey(0);
-	}
-}
-
 bool CBRDFdata::LoadDarkImage(std::string image_folder_path)
 {
     std::string path = image_folder_path + "dark.png";
 
-    m_dark = cv::imread(path);
+    m_dark = cv::imread(path, cv::IMREAD_COLOR);
+
     if(m_dark.dims == 0)
 		return false;
 
 	return true;
 }
 
-void CBRDFdata::SubtractAmbientLight()
+void CBRDFdata::SubtractAmbientLight(std::string image_folder_path)
 {
-    if(m_dark.empty())
+    if(m_dark.dims == 0)
 		return;
-	
+
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
+        cv::Mat diff;
+        diff = (*it) - m_dark;
+        (*it) = diff;
         cv::subtract((*it), m_dark, (*it));
-	}
+    }
 }
 
 void CBRDFdata::LoadCameraParameters(std::string filename)
@@ -302,6 +293,7 @@ void CBRDFdata::LoadModel(std::string filename)
     igl::readOBJ(filename, m_vertices, m_faces);
 
     face_normals = CalcFaceNormals(m_vertices, m_faces);
+    vertex_normals = CalcVertexNormals(m_vertices, m_faces);
     brdf_surfaces.resize(m_faces.rows(), 3);
 
     ScaleMesh();
@@ -313,12 +305,9 @@ Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen
     FN.resize(F.rows(), 3);
     for (int rowCount_F=0; rowCount_F <F.rows(); ++rowCount_F)
     {
-        int vertex1_index = F(rowCount_F,0);
-        int vertex2_index = F(rowCount_F,1);
-        int vertex3_index = F(rowCount_F,2);
-        Eigen::RowVector3d vertex1 = V.block<1,3>(vertex1_index, 0);
-        Eigen::RowVector3d vertex2 = V.block<1,3>(vertex2_index, 0);
-        Eigen::RowVector3d vertex3 = V.block<1,3>(vertex3_index, 0);
+        Eigen::RowVector3d vertex1 = V.block<1,3>(F(rowCount_F,0), 0);
+        Eigen::RowVector3d vertex2 = V.block<1,3>(F(rowCount_F,1), 0);
+        Eigen::RowVector3d vertex3 = V.block<1,3>(F(rowCount_F,2), 0);
         Eigen::RowVector3d edge1 = vertex2 - vertex1;
         Eigen::RowVector3d edge2 = vertex3 - vertex1;
         Eigen::RowVector3d face_normal = edge1.cross(edge2);
@@ -326,6 +315,42 @@ Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen
         FN.row(rowCount_F) = face_normal;
     }
     return FN;
+}
+
+Eigen::MatrixXd CBRDFdata::CalcVertexNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F)
+{
+    // keys are vertices, values are the faces adjacent to the vertex
+    std::multimap<int, int> vertex_to_face;
+    for (int rowCount_F=0; rowCount_F < F.rows(); ++rowCount_F)
+    {
+        for(int i=0; i <3; ++i)
+        {
+            int vertex = F(rowCount_F,i);
+            vertex_to_face.insert(std::make_pair(vertex, rowCount_F));
+        }
+    }
+    Eigen::Matrix<double, Eigen::Dynamic, 3> face_normals_matrix = CalcFaceNormals(V, F);
+    Eigen::Matrix<double, Eigen::Dynamic, 3> vertex_normals_matrix;
+    vertex_normals_matrix.resize(V.rows(), 3);
+
+    for (int row_index = 0; row_index < V.rows(); ++row_index)
+    {
+    //iterator code from cplusplus.com/reference/map/multimap/equal_range/
+    std::pair <std::multimap<int,int>::iterator, std::multimap<int,int>::iterator> ret;
+    ret = vertex_to_face.equal_range(row_index);
+    Eigen::RowVector3d sum = Eigen::RowVector3d::Zero();
+    int count = 0;
+    for (std::multimap<int,int>::iterator it=ret.first; it!=ret.second; ++it)
+    {
+      sum += face_normals_matrix.row(it->second);
+      count++;
+    }
+
+    Eigen::RowVector3d vertex_normal = sum/count;
+    vertex_normals_matrix.normalize();
+    vertex_normals_matrix.row(row_index) = vertex_normal;
+    }
+    return vertex_normals_matrix;
 }
 
 void CBRDFdata::SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel) //BGR
@@ -591,7 +616,7 @@ int get_triangle_given_point(const Eigen::RowVector3d &point, const std::vector<
 cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 {
     cv::Mat map(m_height, m_width, CV_32S);
-    map = cv::Scalar(0.0);
+    map = cv::Scalar(-1.0);
 
     //create map: pixel of image to surface on model(triangle?!) -> 0 means pixel not on model; val_x >0 means belongs to surface x
     //return matrix has size of input image and contains zeros for all pixels that don't contain the object of interest, otherwise the number to
@@ -607,6 +632,10 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
         GLdouble objectX = 0.0;
         GLdouble objectY = 0.0;
         GLdouble objectZ = 0.0;
+
+//        objectX += m_vertices(i,0);
+//        objectY += m_vertices(i,1);
+//        objectZ += m_vertices(i,2);
 		
         for (int j = 0; j < 3; j++) //get center of current triangle
         {
@@ -628,8 +657,8 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 
         int errorValue = gluProject(objectX, objectY, objectZ, model_view, projection, viewport, &winX, &winY, &winZ);
 
-        std::cout << "object: " << objectX << ", " << objectY << ", " << objectZ << '\n';
-        std::cout << "window: " << winX << ", " << winY << ", " << winZ << '\n';
+//        std::cout << "object: " << objectX << ", " << objectY << ", " << objectZ << '\n';
+//        std::cout << "window: " << winX << ", " << winY << ", " << winZ << '\n';
 
         if(winY >=0 && winX >=0)
             map.at<int>(winY, winX) = i;
@@ -909,7 +938,7 @@ void BRDFFunc(double *p, double *x, int m, int n, void *data)
 cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, cv::Mat I)
 {
     cv::Mat brdf = cv::Mat(1, 3, CV_64F);
-	//solve equation I = kd*cos(phi) + ks*cos^n(phi) with 16 sets of values
+    //solve equation I = kd*cos(phi) + ks*cos^n(theta') with 16 sets of values
 	//returns the resulting parameters kd, ks and n, in that order in brdf
 	//phi: contains 16 values
 	//I:   contains 16 values
@@ -945,23 +974,23 @@ cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, 
 
 	int m = 3; //parameters
 	int n = m_numImages; //measurements
-	int itmax = 2000;
+    int itmax = 2000;
 	double opts[LM_OPTS_SZ];
 	double info[LM_INFO_SZ];
+    double lower[] = {0,0,0};
+    double upper[] = {100,100,100};
+//    std::vector<double> lower = boost::assign::list_of(0)(0)(0);
+//    std::vector<double> upper = boost::assign::list_of(100)(100)(100);
 	/* optimization control parameters; passing to levmar NULL instead of opts reverts to defaults */
 	opts[0]=LM_INIT_MU; opts[1]=1E-15; opts[2]=1E-15; opts[3]=1E-20;
 	opts[4]=LM_DIFF_DELTA; // relevant only if the finite difference Jacobian version is used
 
-	int error = dlevmar_dif(BRDFFunc, p, x, m, n, itmax, opts, info, NULL, NULL, data);
+    int error = dlevmar_bc_dif(BRDFFunc, p, x, m, n, lower, upper, NULL, itmax, opts, info, NULL, NULL, data);
 	if(error == -1)
         std::cout << "Error in SolveEquation(..)" << '\n';
 
-//#ifdef _DEBUG
-//
-//	cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g]" << endl;
-//	cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << ", " << endl;
-//
-//#endif
+//    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g]" << '\n';
+    std::cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << ", " << '\n';
 
     brdf.at<double>(0) = p[0];
     brdf.at<double>(1) = p[1];
@@ -988,7 +1017,7 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 	unsigned int count_kd = 0;
 	unsigned int count_ks = 0;
 	unsigned int count_n = 0;
-    bool a =false;
+
     //for each pixel do:
 	for(int x=0; x < m_width; x++)
 		for(int y=0; y < m_height; y++)
@@ -997,11 +1026,10 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
 
 			shizzle++;
 
-            if(currentSurface > 0) //pixel corresponds to a surface on the model
+            if(currentSurface > -1) //pixel corresponds to a surface on the model
             {
-                a=true;
-                std::cout << "x: " << x << '\n';
-                std::cout << "y: " << y << '\n';
+//                std::cout << "x: " << x << '\n';
+//                std::cout << "y: " << y << '\n';
                 cv::Mat phi = GetCosLN(currentSurface);
                 cv::Mat thetaDash = GetCosNH(currentSurface);
                 cv::Mat theta = GetCosRV(currentSurface);

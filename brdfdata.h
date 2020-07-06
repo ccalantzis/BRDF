@@ -45,6 +45,7 @@ public:
     Eigen::MatrixXi m_faces;
     Eigen::MatrixXd m_vertices;
     Eigen::MatrixXd face_normals;
+    Eigen::MatrixXd vertex_normals;
     Eigen::Matrix<brdfSurface, Eigen::Dynamic, 3> brdf_surfaces;
     Eigen::MatrixXd m_led;
 
@@ -73,8 +74,7 @@ public:
     bool LoadImages(std::string image_folder_path);
 	void NormaliseImages();
 	void PrintImages();
-	void PrintNormalisedImages();
-	void SubtractAmbientLight();
+    void SubtractAmbientLight(std::string image_folder_path);
     bool LoadDarkImage(std::string image_folder_path);
 	void LoadCameraParameters(std::string filename);
 	bool ReadInFile(std::string filename, std::vector<char>* buffer);
@@ -90,6 +90,7 @@ public:
     void SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel);
 	bool ReadInFileAsLines(std::string filename, std::vector<char*>* buffer);
     Eigen::MatrixXd CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
+    Eigen::MatrixXd CalcVertexNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
     void ScaleMesh();
     cv::Mat GetCameraOrigin();
     cv::Mat GetA();
