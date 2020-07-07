@@ -387,9 +387,12 @@ void DrawMesh()
                 double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
 
                 //Blinn-Phong colors
-                brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
-                brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
-                brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
+                brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * (pow(cosNH, m_brdf.single_brdf(0).n));
+                brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * (pow(cosNH, m_brdf.single_brdf(1).n));
+                brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * (pow(cosNH, m_brdf.single_brdf(2).n));
+//                brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
+//                brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
+//                brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
             }
             else if(m_brdf.m_model == 0) //PHONG!
             {
@@ -402,9 +405,9 @@ void DrawMesh()
                 float cosRV = viewDir.cwiseProduct(R).sum();
 
                 //Phong colors
-                brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * ((m_brdf.brdf_surfaces(i,0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,0).n));
-                brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * ((m_brdf.brdf_surfaces(i,1).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,1).n));
-                brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * ((m_brdf.brdf_surfaces(i,2).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,2).n));
+                brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * ((m_brdf.single_brdf(0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(0).n));
+                brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * ((m_brdf.single_brdf(1).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(1).n));
+                brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * ((m_brdf.single_brdf(2).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(2).n));
             }
 
             glBegin(GL_TRIANGLES);
@@ -803,7 +806,7 @@ void Display_(void)
 
 		//calc the actual BRDF
         std::cout << "begin calculation" << std::endl;
-		m_brdf.CalcBRDFEquation(m_pixelMap);
+        m_brdf.CalcBRDFEquation_SingleBRDF(m_pixelMap);
         std::cout << "done calculation" << std::endl;
 
 		m_calcedOnce = true;
