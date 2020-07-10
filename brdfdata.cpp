@@ -265,15 +265,14 @@ void CBRDFdata::ScaleMesh()
 
     //in the original code they used 10. But they weren't calculating the min and max values correctly.
     //the min might not be less than 0, guys. and on that note, the max might not be greater than 0.
-    double scaleFactor = 8.65;
+    double scaleFactor = 0.0;
+    //double maxDiff = std::max(diffX, diffY);
+    scaleFactor = 8.65;
 
     m_vertices.col(0) /= diffX;
     m_vertices.col(1) /= diffY;
     m_vertices.col(2) /= diffZ;
-
-    m_vertices.col(0) *= scaleFactor;
-    m_vertices.col(1) *= scaleFactor;
-    m_vertices.col(2) *= scaleFactor;
+    m_vertices *= scaleFactor;
 }
 
 void CBRDFdata::LoadModel(std::string filename)
@@ -283,11 +282,11 @@ void CBRDFdata::LoadModel(std::string filename)
 
     igl::readOBJ(filename, m_vertices, m_faces);
 
+    ScaleMesh();
+
     face_normals = CalcFaceNormals(m_vertices, m_faces);
     vertex_normals = CalcVertexNormals(m_vertices, m_faces);
     brdf_surfaces.resize(m_faces.rows(), 3);
-
-    ScaleMesh();
 }
 
 Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F)
@@ -951,15 +950,15 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixX
     double upper[] = {100,100,100};
 
     /* optimization control parameters; passing to levmar NULL instead of opts reverts to defaults */
-    opts[0]=1; opts[1]=1E-15; opts[2]=1E-15; opts[3]=1E-20;
+    opts[0]=LM_INIT_MU; opts[1]=1E-15; opts[2]=1E-15; opts[3]=1E-50;
     opts[4]=1; // relevant only if the finite difference Jacobian version is used
 
-    //int error = dlevmar_bc_dif(BRDFFunc, p, x, m, n, lower, upper, NULL, itmax, opts, info, NULL, NULL, data);
-    int error = dlevmar_dif(BRDFFunc, p, x, m, n, itmax, opts, info, NULL, NULL, data);
+    int error = dlevmar_bc_dif(BRDFFunc, p, x, m, n, lower, upper, NULL, itmax, opts, info, NULL, NULL, data);
+    //int error = dlevmar_dif(BRDFFunc, p, x, m, n, itmax, opts, info, NULL, NULL, data);
     if(error == -1)
         std::cout << "Error in SolveEquation(..)" << '\n';
 
-    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g]" << '\n';
+    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g] Dp: " << info[3] << '\n';
     std::cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << '\n';
 
     brdf.at<double>(0) = p[0];

@@ -66,6 +66,7 @@ int m_lastMouseX = 0;
 int m_lastMouseY = 0;
 
 bool m_lights = true;
+bool single_BRDF = false;
 
 GLenum my_program;
 GLenum my_fragment_shader;
@@ -329,6 +330,7 @@ void DrawMesh()
                     glVertex3d(m_brdf.m_vertices(m_brdf.m_faces(i,0),0), m_brdf.m_vertices(m_brdf.m_faces(i,0),1), m_brdf.m_vertices(m_brdf.m_faces(i,0),2));
                     glVertex3d(m_brdf.m_vertices(m_brdf.m_faces(i,1),0), m_brdf.m_vertices(m_brdf.m_faces(i,1),1), m_brdf.m_vertices(m_brdf.m_faces(i,1),2));
                     glVertex3d(m_brdf.m_vertices(m_brdf.m_faces(i,2),0), m_brdf.m_vertices(m_brdf.m_faces(i,2),1), m_brdf.m_vertices(m_brdf.m_faces(i,2),2));
+
                 glEnd();
             }
 
@@ -358,7 +360,7 @@ void DrawMesh()
                 objectY += m_brdf.m_vertices(m_brdf.m_faces(i,j),1);
                 objectZ += m_brdf.m_vertices(m_brdf.m_faces(i,j),2);
             }
-		
+
             objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
 
             //calc the light direction
@@ -381,33 +383,48 @@ void DrawMesh()
             double brdfG = 0.0;
             double brdfR = 0.0;
 
+
             if(m_brdf.m_model == 1) //BLINN-PHONG!
             {
-                //calc cos(thetaDash) = dot(normal, h)
-                double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
+               //calc cos(thetaDash) = dot(normal, h)
+               double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
 
-                //Blinn-Phong colors
-                brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * (pow(cosNH, m_brdf.single_brdf(0).n));
-                brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * (pow(cosNH, m_brdf.single_brdf(1).n));
-                brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * (pow(cosNH, m_brdf.single_brdf(2).n));
-//                brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
-//                brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
-//                brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
+               if (single_BRDF)
+               {
+                   brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * (pow(cosNH, m_brdf.single_brdf(0).n));
+                   brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * (pow(cosNH, m_brdf.single_brdf(1).n));
+                   brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * (pow(cosNH, m_brdf.single_brdf(2).n));
+               }
+               else
+               {
+                   brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
+                   brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
+                   brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
+               }
             }
             else if(m_brdf.m_model == 0) //PHONG!
             {
 
-                //calc
-                GLdouble scale_factor = m_brdf.face_normals(i,0) * lightDir[0] +m_brdf.face_normals(i,1) * lightDir[1] + m_brdf.face_normals(i,2) * lightDir[2];
-                Eigen::RowVector3d P = -scale_factor * m_brdf.face_normals.row(i);
-                Eigen::RowVector3d R = lightDir - 2*P;
-                //calc cos(theta) = dot(R, viewDir)
-                float cosRV = viewDir.cwiseProduct(R).sum();
+               //calc
+               GLdouble scale_factor = m_brdf.face_normals(i,0) * lightDir[0] +m_brdf.face_normals(i,1) * lightDir[1] + m_brdf.face_normals(i,2) * lightDir[2];
+               Eigen::RowVector3d P = -scale_factor * m_brdf.face_normals.row(i);
+               Eigen::RowVector3d R = lightDir - 2*P;
+               //calc cos(theta) = dot(R, viewDir)
+               float cosRV = viewDir.cwiseProduct(R).sum();
 
-                //Phong colors
-                brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * ((m_brdf.single_brdf(0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(0).n));
-                brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * ((m_brdf.single_brdf(1).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(1).n));
-                brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * ((m_brdf.single_brdf(2).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(2).n));
+               //Phong colors
+               if (single_BRDF)
+               {
+                   brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * ((m_brdf.single_brdf(0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(0).n));
+                   brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * ((m_brdf.single_brdf(1).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(1).n));
+                   brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * ((m_brdf.single_brdf(2).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.single_brdf(2).n));
+               }
+               else
+               {
+                   brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * ((m_brdf.brdf_surfaces(i,0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,0).n));
+                   brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * ((m_brdf.brdf_surfaces(i,1).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,1).n));
+                   brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * ((m_brdf.brdf_surfaces(i,2).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,2).n));
+               }
             }
 
             glBegin(GL_TRIANGLES);
@@ -422,7 +439,7 @@ void DrawMesh()
                 glVertex3d(m_brdf.m_vertices(m_brdf.m_faces(i,0),0), m_brdf.m_vertices(m_brdf.m_faces(i,0),1), m_brdf.m_vertices(m_brdf.m_faces(i,0),2));
                 glVertex3d(m_brdf.m_vertices(m_brdf.m_faces(i,1),0), m_brdf.m_vertices(m_brdf.m_faces(i,1),1), m_brdf.m_vertices(m_brdf.m_faces(i,1),2));
                 glVertex3d(m_brdf.m_vertices(m_brdf.m_faces(i,2),0), m_brdf.m_vertices(m_brdf.m_faces(i,2),1), m_brdf.m_vertices(m_brdf.m_faces(i,2),2));
-            glEnd();
+                glEnd();
         }
     }
 
@@ -430,146 +447,6 @@ void DrawMesh()
 
     glUseProgramObjectARB(0);
 }
-
-//void DrawMesh()
-//{
-//    //Draws the mesh
-
-//    glPushMatrix();
-//    glTranslatef(0,0,0);
-
-//    int my_vec3R_location = -1;
-//    int my_vec3G_location = -1;
-//    int my_vec3B_location = -1;
-//    int my_cosPhi_location = -1;
-
-//    //if(m_showShadedBRDF && m_calcedOnce)
-//    //{
-//    //	//use the custom shader instead of fixed function OpenGL
-//    //	glUseProgramObjectARB(my_program);
-//    //	int testLoc = glGetUniformLocationARB(my_program, "test");
-//    //	my_vec3R_location = glGetUniformLocationARB(my_program, "brdf_vecR");
-//    //	my_vec3G_location = glGetUniformLocationARB(my_program, "brdf_vecG");
-//    //	my_vec3B_location = glGetUniformLocationARB(my_program, "brdf_vecB");
-//    //	my_cosPhi_location = glGetUniformLocationARB(my_program, "cosPhi");
-//    //}
-//    //else
-//    //	glUseProgramObjectARB(0);
-
-//    if(!m_showShadedBRDF)
-//    {
-//        if(m_meshListID <= 0)
-//        {
-//            m_meshListID = glGenLists(1);
-//            glNewList(m_meshListID, GL_COMPILE);
-
-//            glColor4d(1.0, 1.0, 1.0, 1.0);
-
-//            for(int i=0; i < m_brdf.m_vertices.rows(); i++)
-//            {
-//                glBegin(GL_POINTS);
-//                    glNormal3d(m_brdf.vertex_normals(i,0), m_brdf.vertex_normals(i,1), m_brdf.vertex_normals(i,2));
-//                    glVertex3d(m_brdf.m_vertices(i,0), m_brdf.m_vertices(i,1), m_brdf.m_vertices(i,2));
-//                glEnd();
-//            }
-
-//            glEndList();
-//        }
-//        else
-//            glCallList(m_meshListID);
-//    }
-//    else
-//    {
-//        for(int i=0; i < m_brdf.m_vertices.rows(); i++)
-//        {
-//            //TODO: auslagern auf grafikkarte(in den fragment shader)
-
-//            //get the light source position of source 0
-//            GLfloat lpos[] = {m_eyeX, m_eyeY, m_eyeZ}; //same like the camera position)
-
-//            //get center of current triangle
-//            GLdouble objectX = m_brdf.m_vertices(i,0);
-//            GLdouble objectY = m_brdf.m_vertices(i,1);
-//            GLdouble objectZ = m_brdf.m_vertices(i,2);
-
-//            //calc the light direction
-//            GLdouble lightDir[] = {lpos[0] - objectX, lpos[1] - objectY, lpos[2] - objectZ};
-
-//            //normalize the light direction vector
-//            float norm = sqrt(pow(lightDir[0], 2) + pow(lightDir[1], 2) + pow(lightDir[2], 2));
-//            lightDir[0] /= norm;
-//            lightDir[1] /= norm;
-//            lightDir[2] /= norm;
-
-//            //camera direction
-//            GLdouble viewDir[] = {m_eyeX - m_centerX, m_eyeY - m_centerY, m_eyeZ - m_centerZ};
-
-//            //normalize the camera direction vector
-//            norm = sqrt(pow(viewDir[0], 2) + pow(viewDir[1], 2) + pow(viewDir[2], 2));
-//            viewDir[0] /= norm;
-//            viewDir[1] /= norm;
-//            viewDir[2] /= norm;
-
-//            //calc the half vector between light source vector and view vector
-//            GLdouble h[] = {lightDir[0] + viewDir[0], lightDir[1] + viewDir[1], lightDir[2] + viewDir[2]};
-
-//            //normalize the half vector
-//            norm = sqrt(pow(h[0], 2) + pow(h[1], 2) + pow(h[2], 2));
-//            h[0] /= norm;
-//            h[1] /= norm;
-//            h[2] /= norm;
-
-//            //calc cos(phi) = dot(normal, lightvector)
-//            double cosLN = m_brdf.vertex_normals(i,m_brdf.vertex_normals(i,0) * lightDir[0] + m_brdf.vertex_normals(i,1) * lightDir[1] + m_brdf.vertex_normals(i,2) * lightDir[2]);
-
-//            float brdfB = 0.0;
-//            float brdfG = 0.0;
-//            float brdfR = 0.0;
-
-//            if(m_brdf.m_model == 1) //BLINN-PHONG!
-//            {
-//                //calc cos(thetaDash) = dot(normal, h)
-//                double cosNH = m_brdf.vertex_normals(i,0) * h[0] + m_brdf.vertex_normals(i,1) * h[1] + m_brdf.vertex_normals(i,2) * h[2];
-
-//                //Blinn-Phong colors
-//                brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
-//                brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
-//                brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
-//            }
-//            else if(m_brdf.m_model == 0) //PHONG!
-//            {
-
-//                //calc
-//                GLdouble scale_factor = m_brdf.vertex_normals(i,0) * lightDir[0] +m_brdf.vertex_normals(i,1) * lightDir[1] + m_brdf.vertex_normals(i,2) * lightDir[2];
-//                GLdouble P[] = {-scale_factor * m_brdf.vertex_normals(i,0), -scale_factor * m_brdf.vertex_normals(i,1), -scale_factor * m_brdf.vertex_normals(i,2)};
-//                GLdouble R[] = {-lightDir[0] - 2*P[0], -lightDir[1] - 2*P[1], -lightDir[2] - 2*P[2]};
-//                //calc cos(theta) = dot(R, viewDir)
-//                float cosRV = viewDir[0] * R[0] + viewDir[1] * R[1] + viewDir[2] * R[2];
-
-//                //Phong colors
-//                brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * ((m_brdf.brdf_surfaces(i,0).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,0).n));
-//                brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * ((m_brdf.brdf_surfaces(i,1).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,1).n));
-//                brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * ((m_brdf.brdf_surfaces(i,2).n + 2.0)/(2.0*CV_PI)) * (pow(cosRV, m_brdf.brdf_surfaces(i,2).n));
-//            }
-
-//            glBegin(GL_POINTS);
-//                glNormal3d(m_brdf.vertex_normals(i,0), m_brdf.vertex_normals(i,1), m_brdf.vertex_normals(i,2));
-
-//                //glUniform3f(my_vec3R_location, m_brdf.m_faces[i].brdf[0].kd, m_brdf.m_faces[i].brdf[0].ks, m_brdf.m_faces[i].brdf[0].n);
-//                //glUniform3f(my_vec3G_location, m_brdf.m_faces[i].brdf[1].kd, m_brdf.m_faces[i].brdf[1].ks, m_brdf.m_faces[i].brdf[1].n);
-//                //glUniform3f(my_vec3B_location, m_brdf.m_faces[i].brdf[2].kd, m_brdf.m_faces[i].brdf[2].ks, m_brdf.m_faces[i].brdf[2].n);
-//                //glUniform1f(my_cosPhi_location, cosPhi);
-
-//                glColor4d(brdfR, brdfG, brdfB, 1.0);
-//                glVertex3d(m_brdf.m_vertices(i,0), m_brdf.m_vertices(i,1), m_brdf.m_vertices(i,2));
-//            glEnd();
-//        }
-//    }
-
-//    glPopMatrix();
-
-//    glUseProgramObjectARB(0);
-//}
 
 
 void DrawScene()
@@ -710,6 +587,10 @@ void DrawOnScreenDisplay()
     else
         DrawString(l, 10, m_height-10*i++, color_1, font);
     DrawString(c, 10, m_height-10*i++, color_1, font);
+    if(single_BRDF)
+        DrawString("1: single BRDF function", 10, m_height-10*i++, color_3, font);
+    else
+        DrawString("1: single BRDF function", 10, m_height-10*i++, color_1, font);
 
     glPopMatrix();
 }
@@ -806,7 +687,15 @@ void Display_(void)
 
 		//calc the actual BRDF
         std::cout << "begin calculation" << std::endl;
-        m_brdf.CalcBRDFEquation_SingleBRDF(m_pixelMap);
+        if(single_BRDF)
+        {
+            m_brdf.CalcBRDFEquation_SingleBRDF(m_pixelMap);
+        }
+        else
+        {
+            m_brdf.CalcBRDFEquation(m_pixelMap);
+        }
+
         std::cout << "done calculation" << std::endl;
 
 		m_calcedOnce = true;
@@ -914,6 +803,9 @@ void Keyboard(unsigned char key, int x, int y)
 		case 'c':
 			m_calcNow = true;
 			break;
+        case '1':
+            single_BRDF = true;
+            break;
 
 		default:
 			break;
