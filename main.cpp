@@ -32,6 +32,17 @@ int main(int argc, char** argv)
     std::string obj_path = argv[2];
     std::string cal_path = argv[3];
 
+    Eigen::MatrixXd testing;
+    testing.resize(4,4);
+    testing.row(0) << 0,1,2,3;
+    testing.row(1) << 4,5,6,7;
+    testing.row(2) << 8,9,10,11;
+    testing.row(3) << 12,13,14,15;
+    for (int i = 0; i <16; ++i)
+    {
+        std::cout << testing(i);
+    }
+
 	//read in 3d model + calc surface normals
     m_brdf.LoadModel(obj_path);
 	m_brdf.m_model = 1; //0: Phong, 1: Blinn-Phong

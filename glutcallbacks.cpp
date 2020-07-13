@@ -389,7 +389,7 @@ void DrawMesh()
                //calc cos(thetaDash) = dot(normal, h)
                double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
 
-               if (single_BRDF)
+               if(single_BRDF)
                {
                    brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * (pow(cosNH, m_brdf.single_brdf(0).n));
                    brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * (pow(cosNH, m_brdf.single_brdf(1).n));
@@ -490,7 +490,7 @@ void DrawString(std::string str, int x, int y, float color[4], void *font)
 	glRasterPos3i(x, y, 1);     //set text position
 
 	//loop through all characters in the string
-    for(auto i = str.begin(); i  != str.end(); ++i)
+    for(auto i = str.begin(); i!= str.end(); ++i)
     {
         glutBitmapCharacter(font, *i);
     }
@@ -683,7 +683,7 @@ void Display_(void)
 	{
 		//map each pixel with surface on object
         std::cout << "map pixels to 3d model" << std::endl;
-		m_pixelMap = m_brdf.CalcPixel2SurfaceMapping();
+        m_pixelMap = m_brdf.CalcPixel2SurfaceMapping();
 
 		//calc the actual BRDF
         std::cout << "begin calculation" << std::endl;
@@ -804,7 +804,7 @@ void Keyboard(unsigned char key, int x, int y)
 			m_calcNow = true;
 			break;
         case '1':
-            single_BRDF = true;
+            single_BRDF = !single_BRDF;
             break;
 
 		default:

@@ -521,6 +521,7 @@ int get_triangle_given_point(const Eigen::RowVector3d &point, const std::vector<
             }
         }
     }
+    return -1;
 }
 
 //cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
@@ -903,47 +904,77 @@ void BRDFFunc(double *p, double x[], int m, int n, void *data)
     }
 }
 
-cv::Mat CBRDFdata::SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixXd &thetaDash, Eigen::MatrixXd &theta, Eigen::MatrixXd &I)
+cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Eigen::MatrixXd &thetaDash,
+                                            const Eigen::MatrixXd &theta, const Eigen::MatrixXd &I)
 {
     cv::Mat brdf = cv::Mat(1, 3, CV_64F);
     //solve equation I = kd*cos(phi) + ks*cos^n(theta') with 16 sets of values
     //returns the resulting parameters kd, ks and n, in that order in brdf
 
+    Eigen::RowVectorXd test1 = phi.row(0);
+    Eigen::RowVectorXd test2 = phi.row(18000);
+
+    Eigen::RowVectorXd test3 = theta.row(0);
+    Eigen::RowVectorXd test4 = theta.row(18000);
+
+    Eigen::RowVectorXd test5 = thetaDash.row(0);
+    Eigen::RowVectorXd test6 = thetaDash.row(18000);
+
+    Eigen::RowVectorXd test7 = I.row(0);
+    Eigen::RowVectorXd test8 = I.row(18000);
+
     double p[3] = {0.0, 0.0, 0.0};
     //double p[3] = {1.1, 0.65, 0.2};
     double x[m_numImages*m_faces.rows()];
+    extraData* data = new extraData();
+    data->angles = new double[3*m_numImages*m_faces.rows()];
+
     for(int i=0; i<m_faces.rows(); i++)
     {
         for(int j=0; j<m_numImages; j++)
         {
             x[i*m_numImages+j] = I(i,j);
+//            data->angles[i*m_numImages+j] = phi(i,j);
+//            data->angles[m_numImages*m_faces.rows() + i*m_numImages+j] = thetaDash(i,j);
+//            data->angles[2+m_numImages*m_faces.rows() + i*m_numImages+j] = theta(i,j);
         }
     }
 
-    extraData* data = new extraData();
+//    for(int i=0; i<m_faces.rows(); i++)
+//    {
+//        for(int j=0; j<m_numImages; j++)
+//        {
+//            data->angles[i*m_numImages+j] = phi(i,j);
+//        }
+//    }
 
-    data->angles = new double[3*m_numImages*m_faces.rows()];
     int j = 0;
     for(; j<m_numImages*m_faces.rows(); j++)
     {
         data->angles[j] = phi(j);
+        auto test = phi(j);
+        double fake_test = 1.0;
     }
 
     for(int a=0; j<m_numImages*m_faces.rows()*2; j++, a++)
     {
         data->angles[j] = thetaDash(a);
+        auto test = thetaDash(a);
+        double fake_test = 1.0;
     }
 
     for(int a=0; j<m_numImages*m_faces.rows()*3; j++, a++)
     {
         data->angles[j] = theta(a);
+        auto test = theta(a);
+        double fake_test = 1.0;
     }
 
     data->modelInfo = m_model;
 
     int m = 3; //parameters
     int n = m_numImages*m_faces.rows(); //measurements
-    int itmax = 100000000;
+    int itmax = 2000;
     double opts[LM_OPTS_SZ];
     double info[LM_INFO_SZ];
     double lower[] = {0,0,0};
@@ -958,7 +989,7 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixX
     if(error == -1)
         std::cout << "Error in SolveEquation(..)" << '\n';
 
-    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g] Dp: " << info[3] << '\n';
+    std::cout << "Levenberg-Marquardt returned in " << info[5] << " iterations, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g] Dp: " << info[3] << '\n';
     std::cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << '\n';
 
     brdf.at<double>(0) = p[0];
@@ -1038,16 +1069,31 @@ cv::Mat CBRDFdata::SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thet
     return brdf;
 }
 
-void CBRDFdata::CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap)
+void CBRDFdata::CalcBRDFEquation_SingleBRDF(const cv::Mat &pixelMap)
 {
+    Eigen::MatrixXd phi;
+    phi.resize(m_faces.rows(), m_numImages);
+    Eigen::MatrixXd thetaDash;
+    thetaDash.resize(m_faces.rows(), m_numImages);
+    Eigen::MatrixXd theta;
+    theta.resize(m_faces.rows(), m_numImages);
+
+    for(int x=0; x < m_width; x++)
+    {
+        for(int y=0; y < m_height; y++)
+        {
+            int currentSurface = pixelMap.at<int>(y, x);
+            if(currentSurface > -1) //pixel corresponds to a surface on the model
+            {
+                phi.row(currentSurface) = GetCosLN(currentSurface);
+                thetaDash.row(currentSurface) = GetCosNH(currentSurface);
+                theta.row(currentSurface) = GetCosRV(currentSurface);
+            }
+        }
+    }
+
     for(int colorChannel=0; colorChannel<3; colorChannel++) //do the calculation once for each color-channel
     {
-        Eigen::MatrixXd phi;
-        phi.resize(m_faces.rows(), m_numImages);
-        Eigen::MatrixXd thetaDash;
-        thetaDash.resize(m_faces.rows(), m_numImages);
-        Eigen::MatrixXd theta;
-        theta.resize(m_faces.rows(), m_numImages);
         Eigen::MatrixXd I;
         I.resize(m_faces.rows(), m_numImages);
         //for each pixel in the image
@@ -1059,16 +1105,11 @@ void CBRDFdata::CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap)
 
                 if(currentSurface > -1) //pixel corresponds to a surface on the model
                 {
-                    phi.row(currentSurface) = GetCosLN(currentSurface);
-                    thetaDash.row(currentSurface) = GetCosNH(currentSurface);
-                    theta.row(currentSurface) = GetCosRV(currentSurface);
-
                     //build vector I
                     I.row(currentSurface) = GetIntensities_FromPixel(x, y, colorChannel); //BGR
                 }
             }
         }
-
         cv::Mat brdf = SolveEquation_SingleBRDF(phi, thetaDash, theta, I);
         single_brdf(colorChannel).ks = brdf.at<double>(0);
         single_brdf(colorChannel).kd = brdf.at<double>(1);
@@ -1078,21 +1119,11 @@ void CBRDFdata::CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap)
     std::cout << "100% done\n";
 }
 
-void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
+void CBRDFdata::CalcBRDFEquation(const cv::Mat &pixelMap)
 {
-    int shizzle = 0;
-    double min_kd = -100.0;
-    double max_kd = 1000.0;
     double avg_kd = 0.0;
-    double min_ks = -100.0;
-    double max_ks = 1000.0;
     double avg_ks = 0.0;
-    double min_n = -100.0;
-    double max_n = 1000.0;
     double avg_n = 0.0;
-    unsigned int count_kd = 0;
-    unsigned int count_ks = 0;
-    unsigned int count_n = 0;
 
     //for each pixel do:
     for(int x=0; x < m_width; x++)
@@ -1100,12 +1131,8 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
         {
             int currentSurface = pixelMap.at<int>(y, x);
 
-            shizzle++;
-
             if(currentSurface > -1) //pixel corresponds to a surface on the model
             {
-//                std::cout << "x: " << x << '\n';
-//                std::cout << "y: " << y << '\n';
                 Eigen::RowVectorXd phi = GetCosLN(currentSurface);
                 Eigen::RowVectorXd thetaDash = GetCosNH(currentSurface);
                 Eigen::RowVectorXd theta = GetCosRV(currentSurface);
@@ -1120,38 +1147,15 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
                     //when complete write values to surface in model
                     SaveValuesToSurface(currentSurface, brdf, colorChannel); //BGR
 
-                    if(brdf.at<double>(0) > 0 && brdf.at<double>(0) < 1000)
-                    {
-                        avg_kd += brdf.at<double>(0);
-                        count_kd++;
-                    }
-
-                    if(brdf.at<double>(1) > 0 && brdf.at<double>(1) < 1000)
-                    {
-                        avg_ks += brdf.at<double>(1);
-                        count_ks++;
-                    }
-
-                    if(brdf.at<double>(2) > 0 && brdf.at<double>(2) < 1000)
-                    {
-                        avg_n += brdf.at<double>(2);
-                        count_n++;
-                    }
-
+                    avg_kd += brdf.at<double>(0);
+                    avg_ks += brdf.at<double>(1);
+                    avg_n += brdf.at<double>(2);
                 }
             }
-
-            //progress display
-//			double percent = (double)shizzle*100.0 / (double)(m_width*m_height);
-//			if ((int)shizzle % 100 == 0)
-//                std::cout << (int)percent << "% done\r";
         }
-
-    std::cout << "100% done\n";
-
     //output statistics about brdf values:
 
-    std::cout << /*"kd_min: " << min_kd << ", kd_max: " << max_kd << */", kd_avg: " << avg_kd/count_kd << '\n';
-    std::cout << /*"ks_min: " << min_ks << ", ks_max: " << max_ks << */", ks_avg: " << avg_ks/count_ks << '\n';
-    std::cout << /*"n_min: " << min_n << ", n_max: " << max_n  << */", n_avg: " << avg_n/count_n << '\n';
+    std::cout << /*"kd_min: " << min_kd << ", kd_max: " << max_kd << */", kd_avg: " << avg_kd/(m_faces.rows()*3) << '\n';
+    std::cout << /*"ks_min: " << min_ks << ", ks_max: " << max_ks << */", ks_avg: " << avg_ks/(m_faces.rows()*3) << '\n';
+    std::cout << /*"n_min: " << min_n << ", n_max: " << max_n  << */", n_avg: " << avg_n/(m_faces.rows()*3) << '\n';
 }

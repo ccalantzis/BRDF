@@ -82,13 +82,13 @@ public:
 	void WriteValue(std::string parameter, std::string value);
 	void LoadModel(std::string filename);
     cv::Mat CalcPixel2SurfaceMapping();
-    void CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap);
-    void CalcBRDFEquation(cv::Mat pixelMap);
+    void CalcBRDFEquation_SingleBRDF(const cv::Mat &pixelMap);
+    void CalcBRDFEquation(const cv::Mat &pixelMap);
     Eigen::RowVectorXd GetCosNH(int currentSurface);
     Eigen::RowVectorXd GetCosRV(int currentSurface);
     Eigen::RowVectorXd GetCosLN(int currentSurface);
     Eigen::RowVectorXd GetIntensities_FromPixel(int x, int y, int colorChannel);
-    cv::Mat SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixXd &thetaDash, Eigen::MatrixXd &theta, Eigen::MatrixXd &I);
+    cv::Mat SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Eigen::MatrixXd &thetaDash, const Eigen::MatrixXd &theta, const Eigen::MatrixXd &I);
     cv::Mat SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thetaDash, Eigen::RowVectorXd theta, Eigen::RowVectorXd I);
     void SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel);
 	bool ReadInFileAsLines(std::string filename, std::vector<char*>* buffer);
