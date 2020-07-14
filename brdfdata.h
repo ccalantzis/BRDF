@@ -48,6 +48,8 @@ public:
     Eigen::MatrixXd vertex_normals;
     Eigen::Matrix<brdfSurface, Eigen::Dynamic, 3> brdf_surfaces;
     Eigen::MatrixXd m_led;
+    Eigen::Matrix<brdfSurface, 1, 3> single_brdf;
+
 
 	CBRDFdata()
 	{
@@ -81,23 +83,14 @@ public:
 	void WriteValue(std::string parameter, std::string value);
 	void LoadModel(std::string filename);
     cv::Mat CalcPixel2SurfaceMapping();
-<<<<<<< HEAD
-    void CalcBRDFEquation(cv::Mat pixelMap);
-    cv::Mat GetCosNH(int currentSurface);
-    cv::Mat GetCosRV(int currentSurface);
-    cv::Mat GetCosLN(int currentSurface);
-    cv::Mat GetIntensities(int x, int y, int colorChannel);
-    cv::Mat SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, cv::Mat I);
-=======
-    void CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap);
-    void CalcBRDFEquation(cv::Mat pixelMap);
+    void CalcBRDFEquation_SingleBRDF(const cv::Mat &pixelMap);
+    void CalcBRDFEquation(const cv::Mat &pixelMap);
     Eigen::RowVectorXd GetCosNH(int currentSurface);
     Eigen::RowVectorXd GetCosRV(int currentSurface);
     Eigen::RowVectorXd GetCosLN(int currentSurface);
     Eigen::RowVectorXd GetIntensities_FromPixel(int x, int y, int colorChannel);
-    cv::Mat SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixXd &thetaDash, Eigen::MatrixXd &theta, Eigen::MatrixXd &I);
+    cv::Mat SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Eigen::MatrixXd &thetaDash, const Eigen::MatrixXd &theta, const Eigen::MatrixXd &I);
     cv::Mat SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thetaDash, Eigen::RowVectorXd theta, Eigen::RowVectorXd I);
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
     void SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel);
 	bool ReadInFileAsLines(std::string filename, std::vector<char*>* buffer);
     Eigen::MatrixXd CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);

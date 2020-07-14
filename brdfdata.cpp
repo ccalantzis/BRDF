@@ -32,49 +32,40 @@
 
 bool CBRDFdata::LoadImages(std::string image_folder_path)
 {
-	m_images.clear();
+    m_images.clear();
     std::string extension = ".png";
 
     for(int i=1; i<=m_numImages; i++)
-	{
+    {
         std::string path = image_folder_path + std::to_string(i) + extension;
 
         cv::Mat newImg;
         newImg = cv::imread(path, cv::IMREAD_COLOR);
-        cv::Vec3b intensity = newImg.at<cv::Vec3b>(100, 300);
-        float blue = intensity.val[0];
-        float green = intensity.val[1];
-        float red = intensity.val[2];
-        std::cout << blue << '\n';
-        std::cout << green << '\n';
-        std::cout << red << '\n';
-//        int pixelValue = (int)newImg.at<uchar>(300,100);
-//        std::cout << pixelValue << '\n';
-//        std::cout << newImg.at<cv::Scalar>(300,100).val[0] << '\n';
-        if(newImg.empty())
-			return false;
 
-		if(m_width <= -1 || m_height <= -1)
+        if(newImg.empty())
+            return false;
+
+        if(m_width <= -1 || m_height <= -1)
         {
             m_width = newImg.size().width;
             m_height = newImg.size().height;
-		}
+        }
 
-		m_images.push_back(newImg);
-	}
-	return true;
+        m_images.push_back(newImg);
+    }
+    return true;
 }
 
 //puts out all input images onto the screen
 void CBRDFdata::PrintImages()
 {
-	int i=0;
+    int i=0;
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++, i++)
     {
         std::string name = "image: ";
-		char num[4];
-		snprintf(num, sizeof(num), "%d", i+1);
-		name += num;
+        char num[4];
+        snprintf(num, sizeof(num), "%d", i+1);
+        name += num;
 //        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
 //        cv::imshow(name.c_str(), (*it));
 //        cv::waitKey(0);
@@ -88,7 +79,7 @@ void CBRDFdata::PrintImages()
 //	{
 //		//find darkest pixel in channel
 //		int min_r = 0, min_g = 0, min_b = 0;
-		
+
 //		for(int x = 0; x < (*it)->width; x++)
 //			for(int y = 0; y < (*it)->height; y++)
 //			{
@@ -126,15 +117,15 @@ bool CBRDFdata::LoadDarkImage(std::string image_folder_path)
     m_dark = cv::imread(path, cv::IMREAD_COLOR);
 
     if(m_dark.dims == 0)
-		return false;
+        return false;
 
-	return true;
+    return true;
 }
 
 void CBRDFdata::SubtractAmbientLight(std::string image_folder_path)
 {
     if(m_dark.dims == 0)
-		return;
+        return;
 
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
@@ -147,94 +138,94 @@ void CBRDFdata::SubtractAmbientLight(std::string image_folder_path)
 
 void CBRDFdata::LoadCameraParameters(std::string filename)
 {
-	std::vector<char> buffer;
-	ReadInFile(filename, &buffer);
+    std::vector<char> buffer;
+    ReadInFile(filename, &buffer);
 
-	int i=0;
-	for(std::vector<char>::iterator it = buffer.begin(); it != buffer.end() && (*it != NULL); ++it)
-	{
-		char curr = *it;
-		if(curr == '<')
-		{
-			it++;
+    int i=0;
+    for(std::vector<char>::iterator it = buffer.begin(); it != buffer.end() && (*it != NULL); ++it)
+    {
+        char curr = *it;
+        if(curr == '<')
+        {
+            it++;
             std::string currentParameter = "";
-			for(; it != buffer.end() && (*it) != '>'; ++it) //read in parameter name
-			{
-				currentParameter += (*it);
-			}
+            for(; it != buffer.end() && (*it) != '>'; ++it) //read in parameter name
+            {
+                currentParameter += (*it);
+            }
             std::string currentValue = "";
-			if((*it) == '>') //parameter detected
-				it++;
+            if((*it) == '>') //parameter detected
+                it++;
 
-			//read in value
-			for(; it != buffer.end() && (*it) != '<'; ++it)
-			{
-				currentValue += (*it);
-			}
-			if((*it) == '<') //end of value reached
-				it++;
+            //read in value
+            for(; it != buffer.end() && (*it) != '<'; ++it)
+            {
+                currentValue += (*it);
+            }
+            if((*it) == '<') //end of value reached
+                it++;
 
-			WriteValue(currentParameter, currentValue);
+            WriteValue(currentParameter, currentValue);
 
-			//go to end of current line
-			for(; it != buffer.end() && (*it) != '>'; ++it) //read in parameter name
-			{}
-			if((*it) == '>') //detected end of line
-				it++;
-		}
-	}
+            //go to end of current line
+            for(; it != buffer.end() && (*it) != '>'; ++it) //read in parameter name
+            {}
+            if((*it) == '>') //detected end of line
+                it++;
+        }
+    }
 }
 
 void CBRDFdata::WriteValue(std::string parameter, std::string value)
 {
-	double val = atof(value.c_str());
+    double val = atof(value.c_str());
 
-	if(parameter == "cx")
+    if(parameter == "cx")
         m_principal_point.at<double>(0) = val;
 
-	if(parameter == "cy")
+    if(parameter == "cy")
         m_principal_point.at<double>(1) = val;
 
-	if(parameter == "f")
-		m_focalLength = val;
+    if(parameter == "f")
+        m_focalLength = val;
 
-	if(parameter == "sx")
-		m_pixelSizeX = val;
+    if(parameter == "sx")
+        m_pixelSizeX = val;
 
-	if(parameter == "nx")
+    if(parameter == "nx")
         m_n.at<double>(0) = val;
 
-	if(parameter == "ny")
+    if(parameter == "ny")
         m_n.at<double>(1) = val;
 
-	if(parameter == "nz")
+    if(parameter == "nz")
         m_n.at<double>(2) = val;
 
-	if(parameter == "ox")
+    if(parameter == "ox")
         m_o.at<double>(0) = val;
 
-	if(parameter == "oy")
+    if(parameter == "oy")
         m_o.at<double>(1) = val;
 
-	if(parameter == "oz")
+    if(parameter == "oz")
         m_o.at<double>(2) = val;
 
-	if(parameter == "ax")
+    if(parameter == "ax")
         m_a.at<double>(0) = val;
 
-	if(parameter == "ay")
+    if(parameter == "ay")
         m_a.at<double>(1) = val;
 
-	if(parameter == "az")
+    if(parameter == "az")
         m_a.at<double>(2) = val;
 
-	if(parameter == "px")
+    if(parameter == "px")
         m_p.at<double>(0) = val;
 
-	if(parameter == "py")
+    if(parameter == "py")
         m_p.at<double>(1) = val;
 
-	if(parameter == "pz")
+    if(parameter == "pz")
         m_p.at<double>(2) = val;
 
 }
@@ -242,25 +233,25 @@ void CBRDFdata::WriteValue(std::string parameter, std::string value)
 //returns 0 if file could not be read, 1 otherwise
 bool CBRDFdata::ReadInFile(std::string filename, std::vector<char>* buffer)
 {
-	buffer->clear();
+    buffer->clear();
 
-	std::ifstream file;
+    std::ifstream file;
     file.open(filename, std::ios::in | std::ios::binary);
 
-	if(!file.fail())
-	{ 
-		while(!file.eof())
-		{
-			char currChar;
-			file.get(currChar);
-			buffer->push_back(currChar);
-		}
-		file.close();
-    } 
-	else
+    if(!file.fail())
+    {
+        while(!file.eof())
+        {
+            char currChar;
+            file.get(currChar);
+            buffer->push_back(currChar);
+        }
+        file.close();
+    }
+    else
        return false;
 
-	return true;
+    return true;
 }
 
 void CBRDFdata::ScaleMesh()
@@ -274,29 +265,28 @@ void CBRDFdata::ScaleMesh()
 
     //in the original code they used 10. But they weren't calculating the min and max values correctly.
     //the min might not be less than 0, guys. and on that note, the max might not be greater than 0.
-    double scaleFactor = 8.65;
+    double scaleFactor = 0.0;
+    //double maxDiff = std::max(diffX, diffY);
+    scaleFactor = 8.65;
 
     m_vertices.col(0) /= diffX;
     m_vertices.col(1) /= diffY;
     m_vertices.col(2) /= diffZ;
-
-    m_vertices.col(0) *= scaleFactor;
-    m_vertices.col(1) *= scaleFactor;
-    m_vertices.col(2) *= scaleFactor;
+    m_vertices *= scaleFactor;
 }
 
 void CBRDFdata::LoadModel(std::string filename)
 
 {
-	//load 3d mesh from file
+    //load 3d mesh from file
 
     igl::readOBJ(filename, m_vertices, m_faces);
+
+    ScaleMesh();
 
     face_normals = CalcFaceNormals(m_vertices, m_faces);
     vertex_normals = CalcVertexNormals(m_vertices, m_faces);
     brdf_surfaces.resize(m_faces.rows(), 3);
-
-    ScaleMesh();
 }
 
 Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F)
@@ -355,9 +345,9 @@ Eigen::MatrixXd CBRDFdata::CalcVertexNormals(const Eigen::MatrixXd &V, const Eig
 
 void CBRDFdata::SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorChannel) //BGR
 {
-	//saves the brdf information stored in brdf to the corresponding surface on the model
-	//attention: mind the color channel.. so we will need that information 3x at the surface..
-	//brdf matrix contains parameters: kd, ks and n - in that order
+    //saves the brdf information stored in brdf to the corresponding surface on the model
+    //attention: mind the color channel.. so we will need that information 3x at the surface..
+    //brdf matrix contains parameters: kd, ks and n - in that order
 
     brdf_surfaces(currentSurface, colorChannel).kd = brdf.at<double>(0);
     brdf_surfaces(currentSurface, colorChannel).ks = brdf.at<double>(1);
@@ -366,22 +356,22 @@ void CBRDFdata::SaveValuesToSurface(int currentSurface, cv::Mat brdf, int colorC
 
 cv::Mat CBRDFdata::GetCameraOrigin()
 {
-	return m_p;
+    return m_p;
 }
 
 cv::Mat CBRDFdata::GetA()
 {
-	return m_a;
+    return m_a;
 }
 
 cv::Mat CBRDFdata::GetO()
 {
-	return m_o;
+    return m_o;
 }
 
 cv::Mat CBRDFdata::GetN()
 {
-	return m_n;
+    return m_n;
 }
 
 double CBRDFdata::GetCX()
@@ -531,6 +521,7 @@ int get_triangle_given_point(const Eigen::RowVector3d &point, const std::vector<
             }
         }
     }
+    return -1;
 }
 
 //cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
@@ -636,14 +627,14 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 //        objectX += m_vertices(i,0);
 //        objectY += m_vertices(i,1);
 //        objectZ += m_vertices(i,2);
-		
+
         for (int j = 0; j < 3; j++) //get center of current triangle
         {
             objectX += m_vertices(m_faces(i,j),0);
             objectY += m_vertices(m_faces(i,j),1);
             objectZ += m_vertices(m_faces(i,j),2);
         }
-		
+
         objectX /= 3.0; objectY /= 3.0; objectZ /= 3.0;
 
         GLdouble model_view[16];
@@ -669,96 +660,98 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 
 void CBRDFdata::InitLEDs()
 {
-	//we will need the absolute positions of the leds here hard coded!
-	//we measured:
-	//coordinate origin: x,y = 0; z = 11,5cm
-	//led 1,2,3,4: radius from coordinate origin: 30,5cm, height of the leds from zero: 36,5cm
-	//led 5,6,7,8: --------------------------------||---, height ------------------||-- 26,0cm
-	//led 9,10,11,12: -----------------------------||---, height ------------------||-- 15,0cm
-	//led 13,14,15,16: ----------------------------||---, height ------------------||--  4,5cm
+    //we will need the absolute positions of the leds here hard coded!
+    //we measured:
+    //coordinate origin: x,y = 0; z = 11,5cm
+    //led 1,2,3,4: radius from coordinate origin: 30,5cm, height of the leds from zero: 36,5cm
+    //led 5,6,7,8: --------------------------------||---, height ------------------||-- 26,0cm
+    //led 9,10,11,12: -----------------------------||---, height ------------------||-- 15,0cm
+    //led 13,14,15,16: ----------------------------||---, height ------------------||--  4,5cm
 
     m_led.resize(m_numImages, 3);
 
-	for (int i = 0; i < m_numImages; i++)
-	{		
-		//y coordinate
-		switch (i / 4)
-		{
-			case 0: 
+    for (int i = 0; i < m_numImages; i++)
+    {
+        //y coordinate
+        switch (i / 4)
+        {
+            case 0:
                 m_led(i,1) = 365.0 - 115.0;
-				break;
-			case 1: 
+                break;
+            case 1:
                 m_led(i,1) = 260.0 - 115.0;
-				break;
-			case 2: 
+                break;
+            case 2:
                 m_led(i,1) = 150.0 - 115.0;
-				break;
-			default: 
+                break;
+            default:
                 m_led(i,1) = 45.0 - 115.0;
-				break;
-		}
-		
-		//x+z coordinates
-		switch (i % 4)
-		{
-		case 0:
+                break;
+        }
+
+        //x+z coordinates
+        switch (i % 4)
+        {
+        case 0:
             m_led(i,0) = 305.0 * sin(6.0/33.0*CV_PI*0.5);
             m_led(i,2) = 305.0 * cos(6.0/33.0*CV_PI*0.5);
-			break;
-		case 1:
+            break;
+        case 1:
             m_led(i,0) = 305.0 * sin(13.0/33.0*CV_PI*0.5);
             m_led(i,2) = 305.0 * cos(13.0/33.0*CV_PI*0.5);
-			break;
-		case 2:
+            break;
+        case 2:
             m_led(i,0) = 305.0 * sin(20.0/33.0*CV_PI*0.5);
             m_led(i,2) = 305.0 * cos(20.0/33.0*CV_PI*0.5);
-			break;
-		default:
+            break;
+        default:
             m_led(i,0) = 305.0 * sin(27.0/33.0*CV_PI*0.5);
             m_led(i,2) = 305.0 * cos(27.0/33.0*CV_PI*0.5);
-			break;
-		}
-	}
+            break;
+        }
+    }
 }
 
-cv::Mat CBRDFdata::GetCosRV(int currentSurface)
+Eigen::RowVectorXd CBRDFdata::GetCosRV(int currentSurface)
 {
-    cv::Mat theta(1, m_numImages, CV_64F);
-	//matrix theta contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
+    //cv::Mat theta(1, m_numImages, CV_64F);
+    Eigen::RowVectorXd theta;
+    theta.resize(m_numImages);
+    //matrix theta contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
-	//TODO: check if the below code works!
-	for (int i = 0; i < m_numImages; i++)
-	{
+    //TODO: check if the below code works!
+    for (int i = 0; i < m_numImages; i++)
+    {
         triangle surface;
         surface.row(0) = m_vertices.row(m_faces(currentSurface,0));
         surface.row(1) = m_vertices.row(m_faces(currentSurface,1));
         surface.row(2) = m_vertices.row(m_faces(currentSurface,2));
-		
-		//center of triangle
-		double x = 0;
-		double y = 0;
-		double z = 0;
-		
-		for(int j = 0; j < 3; j++)
-		{
+
+        //center of triangle
+        double x = 0;
+        double y = 0;
+        double z = 0;
+
+        for(int j = 0; j < 3; j++)
+        {
             x += surface(j,0);
             y += surface(j,1);
             z += surface(j,2);
-		}
-		
-		x /= 3.0; y /= 3.0; z /= 3.0;
+        }
 
-		//observer vector
+        x /= 3.0; y /= 3.0; z /= 3.0;
+
+        //observer vector
         Eigen::RowVector3d viewDir;
         viewDir << m_p.at<double>(0) - x, m_p.at<double>(1) - y, m_p.at<double>(2) - z;
         viewDir.normalize();
 
-		//-1 * light vector, this orientation is needed for the formula below
+        //-1 * light vector, this orientation is needed for the formula below
         Eigen::RowVector3d lightDir;
         lightDir << x - m_led(i,0), x - m_led(i,1), x - m_led(i,2);
         lightDir.normalize();
 
-		//need reflexion vector, see http://wiki.delphigl.com/index.php/Reflexion
+        //need reflexion vector, see http://wiki.delphigl.com/index.php/Reflexion
         double scale_factor = face_normals.row(currentSurface).cwiseProduct(lightDir).sum();
 
         Eigen::RowVector3d P;
@@ -767,228 +760,221 @@ cv::Mat CBRDFdata::GetCosRV(int currentSurface)
         Eigen::RowVector3d R;
         R = lightDir - 2*P;
 
-		//reflexion vector * observer vector = theta
-		//it actually return cosTheta! but thats ok, we only need cosTheta!
+        //reflexion vector * observer vector = theta
+        //it actually return cosTheta! but thats ok, we only need cosTheta!
         double angle = R.cwiseProduct(P).sum();
         //double actualAngle = acos(angle)*180.0/CV_PI;
-        theta.at<double>(i) = angle;
-	}
+        theta(i) = angle;
+    }
 
-	return theta;
+    return theta;
 }
 
-cv::Mat CBRDFdata::GetCosLN(int currentSurface)
+Eigen::RowVectorXd CBRDFdata::GetCosLN(int currentSurface)
 {
-    cv::Mat phi(1, m_numImages, CV_64F);
-	//matrix phi contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
+    //cv::Mat phi(1, m_numImages, CV_64F);
+    Eigen::RowVectorXd phi;
+    phi.resize(m_numImages);
+    //matrix phi contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
-	//TODO: check if the below code works!
-	for (int i = 0; i < m_numImages; i++)
-	{
+    //TODO: check if the below code works!
+    for (int i = 0; i < m_numImages; i++)
+    {
         triangle surface;
         surface.row(0) = m_vertices.row(m_faces(currentSurface,0));
         surface.row(1) = m_vertices.row(m_faces(currentSurface,1));
         surface.row(2) = m_vertices.row(m_faces(currentSurface,2));
-		
-		//center of triangle
-		double x = 0;
-		double y = 0;
-		double z = 0;
-		
-		for(int j = 0; j < 3; j++)
-		{
+
+        //center of triangle
+        double x = 0;
+        double y = 0;
+        double z = 0;
+
+        for(int j = 0; j < 3; j++)
+        {
             x += surface(j,0);
             y += surface(j,1);
             z += surface(j,2);
-		}
-		
-		x /= 3.0; y /= 3.0; z /= 3.0;
+        }
 
-		//light vector
+        x /= 3.0; y /= 3.0; z /= 3.0;
+
+        //light vector
         Eigen::RowVector3d lightDir;
         lightDir << m_led(i,0) - x, m_led(i,1) - y, m_led(i,2) - z;
         lightDir.normalize();
-			
-		//light vector * normal vector = phi
-		//it actually return cosPhi! but thats ok, we only need cosPhi!
+
+        //light vector * normal vector = phi
+        //it actually return cosPhi! but thats ok, we only need cosPhi!
         double angle = lightDir.cwiseProduct(face_normals.row(currentSurface)).sum();
         //double actualAngle = acos(angle)*180.0/CV_PI;
-        phi.at<double>(i) = angle;
-	}
+        phi(i) = angle;
+    }
 
-	return phi;
+    return phi;
 }
 
 //calcs the product of surface normal and H
-cv::Mat CBRDFdata::GetCosNH(int currentSurface)
+Eigen::RowVectorXd CBRDFdata::GetCosNH(int currentSurface)
 {
-    cv::Mat theta_dash(1, m_numImages, CV_64F);
-	//matrix theta_dash contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
+    //cv::Mat theta_dash(1, m_numImages, CV_64F);
+    Eigen::RowVectorXd theta_dash;
+    theta_dash.resize(m_numImages);
+    //matrix theta_dash contains angle for led1 in position 0 and angle for led16 in position 15(m_numImages-1)
 
-	for (int i = 0; i < m_numImages; i++)
-	{
+    for (int i = 0; i < m_numImages; i++)
+    {
         triangle surface;
         surface.row(0) = m_vertices.row(m_faces(currentSurface,0));
         surface.row(1) = m_vertices.row(m_faces(currentSurface,1));
         surface.row(2) = m_vertices.row(m_faces(currentSurface,2));
 
-		//center of triangle
-		double x = 0;
-		double y = 0;
-		double z = 0;
-		
-		for(int j = 0; j < 3; j++)
-		{
+        //center of triangle
+        double x = 0;
+        double y = 0;
+        double z = 0;
+
+        for(int j = 0; j < 3; j++)
+        {
             x += surface(j,0);
             y += surface(j,1);
             z += surface(j,2);
-		}
-		
-		x /= 3.0; y /= 3.0; z /= 3.0;
+        }
 
-		//|light vector + observer vector| = half vector
+        x /= 3.0; y /= 3.0; z /= 3.0;
+
+        //|light vector + observer vector| = half vector
         Eigen::RowVector3d H;
         H <<  m_led(i,0) - 2*x + m_p.at<double>(0), m_led(i,1) - 2*y + m_p.at<double>(1), m_led(i,2) - 2*z + m_p.at<double>(2);
         H.normalize();
-			
-		//half vector * normal vector = theta
+
+        //half vector * normal vector = theta
         //it actually return cosTheta'! but thats ok, we only need cosTheta'!
         double angle = H.cwiseProduct(face_normals.row(currentSurface)).sum();
         //double actualAngle = acos(angle)*180.0/CV_PI;
-        theta_dash.at<double>(i) = angle;
-	}
+        theta_dash(i) = angle;
+    }
 
-	return theta_dash;
+    return theta_dash;
 }
 
-cv::Mat CBRDFdata::GetIntensities(int x, int y, int colorChannel) //BGR
+Eigen::RowVectorXd CBRDFdata::GetIntensities_FromPixel(int x, int y, int colorChannel) //BGR
 {
-    cv::Mat I = cv::Mat(1, m_numImages, CV_64F);
-	//matrix I contains image Intensities for iamge1 position 0 and intensity for image16 in position 15(m_numImages-1)
-	//this function just gets the values of one color channel!
-	int num = 0;
+    Eigen::RowVectorXd I;
+    I.resize(m_numImages);
+    //= cv::Mat(1, m_numImages, CV_64F);
+    //matrix I contains image Intensities for iamge1 position 0 and intensity for image16 in position 15(m_numImages-1)
+    //this function just gets the values of one color channel!
+    int num = 0;
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
         cv::Vec3b intensity = (*it).at<cv::Vec3b>((*it).size().height-1-y, x);
         double currIntensity = intensity.val[colorChannel]/255.0;
-        I.at<double>(num++) = currIntensity;
-	}
-	return I;
+        I(num++) = currIntensity;
+    }
+    return I;
 }
 
 struct extraData
 {
-	double* angles;
-	int modelInfo;
+    double* angles;
+    int modelInfo;
 };
 
 /* model to be fitted to measurements */
-void BRDFFunc(double *p, double *x, int m, int n, void *data)
+void BRDFFunc(double *p, double x[], int m, int n, void *data)
 {
-	register int i;
+    extraData* incommingData = (extraData*)data;
+    double* angles = incommingData->angles;
+    int model = incommingData->modelInfo;
 
-	extraData* incommingData = (extraData*)data;
-	double* angles = incommingData->angles;
-	int model = incommingData->modelInfo;
-
-	for(int i=0; i<n; i++)
-	{
-		double currCosPhi = angles[i];
-		if(model == 0) //PHONG!
-		{
-			double currCosTheta = angles[i+n*2];
-			x[i] = p[0]*currCosPhi + ((p[2] + 2.0)/2.0*CV_PI)*p[1]*(pow(currCosTheta,p[2]));
-		}
-		else if(model == 1) //BLINN-PHONG!
-		{		
-			double currCosThetaDash = angles[i+n];
-			x[i] = p[0]*currCosPhi + p[1]*(pow(currCosThetaDash,p[2]));
-		}
-	}	
+    for(int i=0; i<n; i++)
+    {
+        double currCosPhi = angles[i];
+        if(model == 0) //PHONG!
+        {
+            double currCosTheta = angles[i+n*2];
+            x[i] = p[0]*currCosPhi + ((p[2] + 2.0)/2.0*CV_PI)*p[1]*(pow(currCosTheta,p[2]));
+        }
+        else if(model == 1) //BLINN-PHONG!
+        {
+            double currCosThetaDash = angles[i+n];
+            x[i] = p[0]*currCosPhi + p[1]*(pow(currCosThetaDash,p[2]));
+        }
+    }
 }
 
-<<<<<<< HEAD
-cv::Mat CBRDFdata::SolveEquation(cv::Mat phi, cv::Mat thetaDash, cv::Mat theta, cv::Mat I)
-{
-    cv::Mat brdf = cv::Mat(1, 3, CV_64F);
-    //solve equation I = kd*cos(phi) + ks*cos^n(theta') with 16 sets of values
-	//returns the resulting parameters kd, ks and n, in that order in brdf
-	//phi: contains 16 values
-	//I:   contains 16 values
-
-	double p[3] = {0.5, 1.0, 1.0};
-	//double p[3] = {1.1, 0.65, 0.2};
-	double* x = new double[m_numImages];
-	for(int i=0; i<m_numImages; i++)
-	{
-        x[i] = I.at<double>(i);
-	}
-
-	extraData* data = new extraData();
-
-    data->angles = new double[phi.cols + thetaDash.cols + theta.cols];
-	int j = 0;
-	for(; j<m_numImages; j++)
-	{
-        data->angles[j] = phi.at<double>(j);
-	}
-	
-	for(int a=0; j<m_numImages*2; j++, a++)
-	{
-        data->angles[j] = thetaDash.at<double>(a);
-	}
-
-	for(int a=0; j<m_numImages*3; j++, a++)
-	{
-        data->angles[j] = theta.at<double>(a);
-	}
-	
-	data->modelInfo = m_model;
-
-	int m = 3; //parameters
-	int n = m_numImages; //measurements
-=======
-cv::Mat CBRDFdata::SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixXd &thetaDash, Eigen::MatrixXd &theta, Eigen::MatrixXd &I)
+cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Eigen::MatrixXd &thetaDash,
+                                            const Eigen::MatrixXd &theta, const Eigen::MatrixXd &I)
 {
     cv::Mat brdf = cv::Mat(1, 3, CV_64F);
     //solve equation I = kd*cos(phi) + ks*cos^n(theta') with 16 sets of values
     //returns the resulting parameters kd, ks and n, in that order in brdf
 
+    Eigen::RowVectorXd test1 = phi.row(0);
+    Eigen::RowVectorXd test2 = phi.row(18000);
+
+    Eigen::RowVectorXd test3 = theta.row(0);
+    Eigen::RowVectorXd test4 = theta.row(18000);
+
+    Eigen::RowVectorXd test5 = thetaDash.row(0);
+    Eigen::RowVectorXd test6 = thetaDash.row(18000);
+
+    Eigen::RowVectorXd test7 = I.row(0);
+    Eigen::RowVectorXd test8 = I.row(18000);
+
     double p[3] = {0.0, 0.0, 0.0};
     //double p[3] = {1.1, 0.65, 0.2};
     double x[m_numImages*m_faces.rows()];
+    extraData* data = new extraData();
+    data->angles = new double[3*m_numImages*m_faces.rows()];
+
     for(int i=0; i<m_faces.rows(); i++)
     {
         for(int j=0; j<m_numImages; j++)
         {
             x[i*m_numImages+j] = I(i,j);
+//            data->angles[i*m_numImages+j] = phi(i,j);
+//            data->angles[m_numImages*m_faces.rows() + i*m_numImages+j] = thetaDash(i,j);
+//            data->angles[2+m_numImages*m_faces.rows() + i*m_numImages+j] = theta(i,j);
         }
     }
 
-    extraData* data = new extraData();
+//    for(int i=0; i<m_faces.rows(); i++)
+//    {
+//        for(int j=0; j<m_numImages; j++)
+//        {
+//            data->angles[i*m_numImages+j] = phi(i,j);
+//        }
+//    }
 
-    data->angles = new double[3*m_numImages*m_faces.rows()];
     int j = 0;
     for(; j<m_numImages*m_faces.rows(); j++)
     {
         data->angles[j] = phi(j);
+        auto test = phi(j);
+        double fake_test = 1.0;
     }
 
     for(int a=0; j<m_numImages*m_faces.rows()*2; j++, a++)
     {
         data->angles[j] = thetaDash(a);
+        auto test = thetaDash(a);
+        double fake_test = 1.0;
     }
 
     for(int a=0; j<m_numImages*m_faces.rows()*3; j++, a++)
     {
         data->angles[j] = theta(a);
+        auto test = theta(a);
+        double fake_test = 1.0;
     }
 
     data->modelInfo = m_model;
 
     int m = 3; //parameters
     int n = m_numImages*m_faces.rows(); //measurements
-    int itmax = 100000000;
+    int itmax = 2000;
     double opts[LM_OPTS_SZ];
     double info[LM_INFO_SZ];
     double lower[] = {0,0,0};
@@ -1003,7 +989,7 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(Eigen::MatrixXd &phi, Eigen::MatrixX
     if(error == -1)
         std::cout << "Error in SolveEquation(..)" << '\n';
 
-    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g] Dp: " << info[3] << '\n';
+    std::cout << "Levenberg-Marquardt returned in " << info[5] << " iterations, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g] Dp: " << info[3] << '\n';
     std::cout << "Best fit parameters: "<< p[0] << ", " <<  p[1] << ", "  << p[2] << '\n';
 
     brdf.at<double>(0) = p[0];
@@ -1055,20 +1041,19 @@ cv::Mat CBRDFdata::SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thet
 
     int m = 3; //parameters
     int n = m_numImages; //measurements
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
     int itmax = 100;
-	double opts[LM_OPTS_SZ];
-	double info[LM_INFO_SZ];
+    double opts[LM_OPTS_SZ];
+    double info[LM_INFO_SZ];
     double lower[] = {0,0,0};
     double upper[] = {100,100,100};
-//    std::vector<double> lower = boost::assign::list_of(0)(0)(0);
-//    std::vector<double> upper = boost::assign::list_of(100)(100)(100);
-	/* optimization control parameters; passing to levmar NULL instead of opts reverts to defaults */
-	opts[0]=LM_INIT_MU; opts[1]=1E-15; opts[2]=1E-15; opts[3]=1E-20;
-	opts[4]=LM_DIFF_DELTA; // relevant only if the finite difference Jacobian version is used
+
+    /* optimization control parameters; passing to levmar NULL instead of opts reverts to defaults */
+    opts[0]=LM_INIT_MU; opts[1]=1E-15; opts[2]=1E-15; opts[3]=1E-20;
+    opts[4]=LM_DIFF_DELTA; // relevant only if the finite difference Jacobian version is used
 
     int error = dlevmar_bc_dif(BRDFFunc, p, x, m, n, lower, upper, NULL, itmax, opts, info, NULL, NULL, data);
-	if(error == -1)
+    //int error = dlevmar_dif(BRDFFunc, p, x, m, n, itmax, opts, info, NULL, NULL, data);
+    if(error == -1)
         std::cout << "Error in SolveEquation(..)" << '\n';
 
 //    std::cout << "Levenberg-Marquardt returned in " << info[5] << "iter, reason " << info[6] << ", sumsq " << info[1] << "[" << info[0] << "g]" << '\n';
@@ -1078,26 +1063,37 @@ cv::Mat CBRDFdata::SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thet
     brdf.at<double>(1) = p[1];
     brdf.at<double>(2) = p[2];
 
-<<<<<<< HEAD
-	delete[] data->angles;
-	delete data;
-=======
     delete[] data->angles;
     delete data;
 
     return brdf;
 }
 
-void CBRDFdata::CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap)
+void CBRDFdata::CalcBRDFEquation_SingleBRDF(const cv::Mat &pixelMap)
 {
+    Eigen::MatrixXd phi;
+    phi.resize(m_faces.rows(), m_numImages);
+    Eigen::MatrixXd thetaDash;
+    thetaDash.resize(m_faces.rows(), m_numImages);
+    Eigen::MatrixXd theta;
+    theta.resize(m_faces.rows(), m_numImages);
+
+    for(int x=0; x < m_width; x++)
+    {
+        for(int y=0; y < m_height; y++)
+        {
+            int currentSurface = pixelMap.at<int>(y, x);
+            if(currentSurface > -1) //pixel corresponds to a surface on the model
+            {
+                phi.row(currentSurface) = GetCosLN(currentSurface);
+                thetaDash.row(currentSurface) = GetCosNH(currentSurface);
+                theta.row(currentSurface) = GetCosRV(currentSurface);
+            }
+        }
+    }
+
     for(int colorChannel=0; colorChannel<3; colorChannel++) //do the calculation once for each color-channel
     {
-        Eigen::MatrixXd phi;
-        phi.resize(m_faces.rows(), m_numImages);
-        Eigen::MatrixXd thetaDash;
-        thetaDash.resize(m_faces.rows(), m_numImages);
-        Eigen::MatrixXd theta;
-        theta.resize(m_faces.rows(), m_numImages);
         Eigen::MatrixXd I;
         I.resize(m_faces.rows(), m_numImages);
         //for each pixel in the image
@@ -1109,85 +1105,34 @@ void CBRDFdata::CalcBRDFEquation_SingleBRDF(cv::Mat pixelMap)
 
                 if(currentSurface > -1) //pixel corresponds to a surface on the model
                 {
-                    phi.row(currentSurface) = GetCosLN(currentSurface);
-                    thetaDash.row(currentSurface) = GetCosNH(currentSurface);
-                    theta.row(currentSurface) = GetCosRV(currentSurface);
-
                     //build vector I
                     I.row(currentSurface) = GetIntensities_FromPixel(x, y, colorChannel); //BGR
                 }
             }
         }
-
         cv::Mat brdf = SolveEquation_SingleBRDF(phi, thetaDash, theta, I);
         single_brdf(colorChannel).ks = brdf.at<double>(0);
         single_brdf(colorChannel).kd = brdf.at<double>(1);
         single_brdf(colorChannel).n = brdf.at<double>(2);
     }
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
 
-	return brdf;
+    std::cout << "100% done\n";
 }
 
-void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
+void CBRDFdata::CalcBRDFEquation(const cv::Mat &pixelMap)
 {
-<<<<<<< HEAD
-	int shizzle = 0;
-	double min_kd = -100.0;
-	double max_kd = 1000.0;
-	double avg_kd = 0.0;
-	double min_ks = -100.0;
-	double max_ks = 1000.0;
-	double avg_ks = 0.0;
-	double min_n = -100.0;
-	double max_n = 1000.0;
-	double avg_n = 0.0;
-	unsigned int count_kd = 0;
-	unsigned int count_ks = 0;
-	unsigned int count_n = 0;
-=======
-    int shizzle = 0;
-    double min_kd = -100.0;
-    double max_kd = 1000.0;
     double avg_kd = 0.0;
-    double min_ks = -100.0;
-    double max_ks = 1000.0;
     double avg_ks = 0.0;
-    double min_n = -100.0;
-    double max_n = 1000.0;
     double avg_n = 0.0;
-    unsigned int count_kd = 0;
-    unsigned int count_ks = 0;
-    unsigned int count_n = 0;
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
 
     //for each pixel do:
-	for(int x=0; x < m_width; x++)
-		for(int y=0; y < m_height; y++)
-		{
+    for(int x=0; x < m_width; x++)
+        for(int y=0; y < m_height; y++)
+        {
             int currentSurface = pixelMap.at<int>(y, x);
-
-<<<<<<< HEAD
-			shizzle++;
-=======
-            shizzle++;
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
 
             if(currentSurface > -1) //pixel corresponds to a surface on the model
             {
-//                std::cout << "x: " << x << '\n';
-//                std::cout << "y: " << y << '\n';
-<<<<<<< HEAD
-                cv::Mat phi = GetCosLN(currentSurface);
-                cv::Mat thetaDash = GetCosNH(currentSurface);
-                cv::Mat theta = GetCosRV(currentSurface);
-				for(int colorChannel=0; colorChannel<3; colorChannel++) //do the calculation once for each color-channel
-				{
-					//build vector I
-                    cv::Mat I = GetIntensities(x, y, colorChannel); //BGR
-				
-					//solve equation with 16 sets of values
-=======
                 Eigen::RowVectorXd phi = GetCosLN(currentSurface);
                 Eigen::RowVectorXd thetaDash = GetCosNH(currentSurface);
                 Eigen::RowVectorXd theta = GetCosRV(currentSurface);
@@ -1197,77 +1142,20 @@ void CBRDFdata::CalcBRDFEquation(cv::Mat pixelMap)
                     Eigen::RowVectorXd I = GetIntensities_FromPixel(x, y, colorChannel); //BGR
 
                     //solve equation with 16 sets of values
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
                     cv::Mat brdf = SolveEquation(phi, thetaDash, theta, I);
-				
-					//when complete write values to surface in model
-					SaveValuesToSurface(currentSurface, brdf, colorChannel); //BGR
 
-                    if(brdf.at<double>(0) > 0 && brdf.at<double>(0) < 1000)
-					{
-                        avg_kd += brdf.at<double>(0);
-						count_kd++;
-					}
-					
-                    if(brdf.at<double>(1) > 0 && brdf.at<double>(1) < 1000)
-					{
-                        avg_ks += brdf.at<double>(1);
-						count_ks++;
-					}
-				
-                    if(brdf.at<double>(2) > 0 && brdf.at<double>(2) < 1000)
-					{
-                        avg_n += brdf.at<double>(2);
-						count_n++;
-					}
-					
-				}
-			}
+                    //when complete write values to surface in model
+                    SaveValuesToSurface(currentSurface, brdf, colorChannel); //BGR
 
-			//progress display
-//			double percent = (double)shizzle*100.0 / (double)(m_width*m_height);
-//			if ((int)shizzle % 100 == 0)
-//                std::cout << (int)percent << "% done\r";
-		}
-
-    std::cout << "100% done\n";
-
-<<<<<<< HEAD
-	//output statistics about brdf values:
-=======
-                    if(brdf.at<double>(0) > 0 && brdf.at<double>(0) < 1000)
-                    {
-                        avg_kd += brdf.at<double>(0);
-                        count_kd++;
-                    }
-
-                    if(brdf.at<double>(1) > 0 && brdf.at<double>(1) < 1000)
-                    {
-                        avg_ks += brdf.at<double>(1);
-                        count_ks++;
-                    }
-
-                    if(brdf.at<double>(2) > 0 && brdf.at<double>(2) < 1000)
-                    {
-                        avg_n += brdf.at<double>(2);
-                        count_n++;
-                    }
-
+                    avg_kd += brdf.at<double>(0);
+                    avg_ks += brdf.at<double>(1);
+                    avg_n += brdf.at<double>(2);
                 }
             }
-
-            //progress display
-//			double percent = (double)shizzle*100.0 / (double)(m_width*m_height);
-//			if ((int)shizzle % 100 == 0)
-//                std::cout << (int)percent << "% done\r";
         }
-
-    std::cout << "100% done\n";
-
     //output statistics about brdf values:
->>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
 
-    std::cout << /*"kd_min: " << min_kd << ", kd_max: " << max_kd << */", kd_avg: " << avg_kd/count_kd << '\n';
-    std::cout << /*"ks_min: " << min_ks << ", ks_max: " << max_ks << */", ks_avg: " << avg_ks/count_ks << '\n';
-    std::cout << /*"n_min: " << min_n << ", n_max: " << max_n  << */", n_avg: " << avg_n/count_n << '\n';
+    std::cout << /*"kd_min: " << min_kd << ", kd_max: " << max_kd << */", kd_avg: " << avg_kd/(m_faces.rows()*3) << '\n';
+    std::cout << /*"ks_min: " << min_ks << ", ks_max: " << max_ks << */", ks_avg: " << avg_ks/(m_faces.rows()*3) << '\n';
+    std::cout << /*"n_min: " << min_n << ", n_max: " << max_n  << */", n_avg: " << avg_n/(m_faces.rows()*3) << '\n';
 }
