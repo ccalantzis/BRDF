@@ -38,7 +38,7 @@ DISTNAME      = brdf1.0.0
 DISTDIR = /home/catriona/src/BRDF/.tmp/brdf1.0.0
 LINK          = g++
 LFLAGS        = -Wl,-O1 -Wl,-rpath,/home/catriona/Qt5.9.9/5.9.9/gcc_64/lib
-LIBS          = $(SUBLIBS) `pkg-config --libs opencv` /home/catriona/src/BRDF-linux/levmar/liblevmar.a -lstdc++ -lglut -lGLU -lopenblas -lopencv_core -lopencv_imgproc -lopencv_highgui -L/home/catriona/Qt5.9.9/5.9.9/gcc_64/lib -lQt5OpenGL -lQt5Widgets -lQt5Gui -lQt5Xml -lQt5Core -lGL -lpthread 
+LIBS          = $(SUBLIBS) `pkg-config --libs opencv` /home/catriona/src/BRDF/levmar/liblevmar.a -lstdc++ -lglut -lGLU -lopenblas -lopencv_core -lopencv_imgproc -lopencv_highgui -L/home/catriona/Qt5.9.9/5.9.9/gcc_64/lib -lQt5OpenGL -lQt5Widgets -lQt5Gui -lQt5Xml -lQt5Core -lGL -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -217,7 +217,6 @@ DIST          = ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/spec_pre.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/qt_config.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/linux-g++/qmake.conf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/spec_post.prf \
-		.qmake.stash \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/exclusive_builds.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/toolchain.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/default_pre.prf \
@@ -414,7 +413,6 @@ Makefile: BRDF.pro ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/linux-g++/qmake.conf ../..
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/qt_config.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/linux-g++/qmake.conf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/spec_post.prf \
-		.qmake.stash \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/exclusive_builds.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/toolchain.prf \
 		../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/default_pre.prf \
@@ -601,7 +599,6 @@ Makefile: BRDF.pro ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/linux-g++/qmake.conf ../..
 ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/qt_config.prf:
 ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/linux-g++/qmake.conf:
 ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/spec_post.prf:
-.qmake.stash:
 ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/exclusive_builds.prf:
 ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/toolchain.prf:
 ../../Qt5.9.9/5.9.9/gcc_64/mkspecs/features/default_pre.prf:

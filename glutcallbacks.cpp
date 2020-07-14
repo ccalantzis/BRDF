@@ -383,6 +383,7 @@ void DrawMesh()
 
             if(m_brdf.m_model == 1) //BLINN-PHONG!
             {
+<<<<<<< HEAD
                 //calc cos(thetaDash) = dot(normal, h)
                 double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
 
@@ -390,6 +391,23 @@ void DrawMesh()
                 brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
                 brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
                 brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
+=======
+               //calc cos(thetaDash) = dot(normal, h)
+               double cosNH = m_brdf.face_normals.row(i).cwiseProduct(h).sum();
+
+               if (single_BRDF)
+               {
+                   brdfB = m_brdf.single_brdf(0).kd * cosLN + m_brdf.single_brdf(0).ks * (pow(cosNH, m_brdf.single_brdf(0).n));
+                   brdfG = m_brdf.single_brdf(1).kd * cosLN + m_brdf.single_brdf(1).ks * (pow(cosNH, m_brdf.single_brdf(1).n));
+                   brdfR = m_brdf.single_brdf(2).kd * cosLN + m_brdf.single_brdf(2).ks * (pow(cosNH, m_brdf.single_brdf(2).n));
+               }
+               else
+               {
+                   brdfB = m_brdf.brdf_surfaces(i,0).kd * cosLN + m_brdf.brdf_surfaces(i,0).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,0).n));
+                   brdfG = m_brdf.brdf_surfaces(i,1).kd * cosLN + m_brdf.brdf_surfaces(i,1).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,1).n));
+                   brdfR = m_brdf.brdf_surfaces(i,2).kd * cosLN + m_brdf.brdf_surfaces(i,2).ks * (pow(cosNH, m_brdf.brdf_surfaces(i,2).n));
+               }
+>>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
             }
             else if(m_brdf.m_model == 0) //PHONG!
             {
@@ -911,6 +929,12 @@ void Keyboard(unsigned char key, int x, int y)
 		case 'c':
 			m_calcNow = true;
 			break;
+<<<<<<< HEAD
+=======
+        case '1':
+            single_BRDF = true;
+            break;
+>>>>>>> parent of 6d780da... Having an issue where if we calculate BRDF per triangle, and then calculate a single BRDF, we only get the blue channel. This does not occur if we calculate a single BRDF first. Did not find a reason for this issue today.
 
 		default:
 			break;
