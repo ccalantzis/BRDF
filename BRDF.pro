@@ -27,4 +27,4 @@ SOURCES += brdfdata.cpp
 SOURCES += glutcallbacks.cpp
 SOURCES += main.cpp
 
-linux:LIBS += `pkg-config --libs opencv` /home/catriona/src/BRDF/levmar/liblevmar.a -lstdc++ -lGL -lglut -lGLU -lopenblas -lpthread -lopencv_core -lopencv_imgproc -lopencv_highgui
+linux:LIBS += `pkg-config --libs opencv` levmar/liblevmar.a -lstdc++ -lGL -lglut -lGLU -lopenblas -lpthread -lopencv_core -lopencv_imgproc -lopencv_highgui

@@ -25,6 +25,11 @@ int m_height = 600;
 // main function
 int main(int argc, char** argv)
 {	
+    if(argc < 3)
+    {
+        std::cout << "required command line arguments: path to image folder, path to obj file, path to cal file\n";
+        return -1;
+    }
 	//data structure for brdf
 	m_brdf = CBRDFdata();
 
