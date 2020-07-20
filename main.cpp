@@ -38,12 +38,14 @@ int main(int argc, char** argv)
     std::string cal_path = argv[3];
 
 	//read in 3d model + calc surface normals
-    m_brdf.LoadModel(obj_path);
+    bool code = m_brdf.LoadModel(obj_path);
+    if(!code) return -1;
 	m_brdf.m_model = 1; //0: Phong, 1: Blinn-Phong
 
 	//read in 16 images
 	//assuming images are named 1.jpg to 16.jpg
-    m_brdf.LoadImages(image_folder_path);
+    code = m_brdf.LoadImages(image_folder_path);
+    if(!code) return -1;
     m_brdf.PrintImages();
     m_brdf.LoadDarkImage(image_folder_path);
     //subtract ambient light is a bit broken
@@ -53,7 +55,8 @@ int main(int argc, char** argv)
 	//m_brdf.PrintNormalisedImages();
 	
 	//read in geometry and camera infos
-    m_brdf.LoadCameraParameters(cal_path);
+    code = m_brdf.LoadCameraParameters(cal_path);
+    if(!code) return -1;
 
 	//initialise led positions
 	m_brdf.InitLEDs();

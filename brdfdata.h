@@ -78,10 +78,10 @@ public:
 	void PrintImages();
     void SubtractAmbientLight(std::string image_folder_path);
     bool LoadDarkImage(std::string image_folder_path);
-	void LoadCameraParameters(std::string filename);
+    bool LoadCameraParameters(std::string filename);
 	bool ReadInFile(std::string filename, std::vector<char>* buffer);
 	void WriteValue(std::string parameter, std::string value);
-	void LoadModel(std::string filename);
+    bool LoadModel(std::string filename);
     cv::Mat CalcPixel2SurfaceMapping();
     void CalcBRDFEquation_SingleBRDF(const cv::Mat &pixelMap);
     void CalcBRDFEquation(const cv::Mat &pixelMap);

@@ -40,10 +40,13 @@ bool CBRDFdata::LoadImages(std::string image_folder_path)
         std::string path = image_folder_path + std::to_string(i) + extension;
 
         cv::Mat newImg;
-        newImg = cv::imread(path, cv::IMREAD_COLOR);
+        newImg = cv::imread(path);
 
         if(newImg.empty())
+        {
+            std::cout << "Error reading images\n";
             return false;
+        }
 
         if(m_width <= -1 || m_height <= -1)
         {
@@ -136,10 +139,16 @@ void CBRDFdata::SubtractAmbientLight(std::string image_folder_path)
     }
 }
 
-void CBRDFdata::LoadCameraParameters(std::string filename)
+bool CBRDFdata::LoadCameraParameters(std::string filename)
 {
     std::vector<char> buffer;
-    ReadInFile(filename, &buffer);
+    bool success = ReadInFile(filename, &buffer);
+
+    if(!success)
+    {
+        std::cout << "Camera calibration file could not be read\n";
+        return false;
+    }
 
     int i=0;
     for(std::vector<char>::iterator it = buffer.begin(); it != buffer.end() && (*it != NULL); ++it)
@@ -174,6 +183,7 @@ void CBRDFdata::LoadCameraParameters(std::string filename)
                 it++;
         }
     }
+    return true;
 }
 
 void CBRDFdata::WriteValue(std::string parameter, std::string value)
@@ -275,18 +285,25 @@ void CBRDFdata::ScaleMesh()
     m_vertices *= scaleFactor;
 }
 
-void CBRDFdata::LoadModel(std::string filename)
+bool CBRDFdata::LoadModel(std::string filename)
 
 {
     //load 3d mesh from file
 
-    igl::readOBJ(filename, m_vertices, m_faces);
+    bool success = igl::readOBJ(filename, m_vertices, m_faces);
+    if(!success)
+    {
+        std::cout << "Could not read obj file\n";
+        return false;
+    }
 
     ScaleMesh();
 
     face_normals = CalcFaceNormals(m_vertices, m_faces);
     vertex_normals = CalcVertexNormals(m_vertices, m_faces);
     brdf_surfaces.resize(m_faces.rows(), 3);
+
+    return true;
 }
 
 Eigen::MatrixXd CBRDFdata::CalcFaceNormals(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F)
@@ -910,22 +927,14 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Ei
     cv::Mat brdf = cv::Mat(1, 3, CV_64F);
     //solve equation I = kd*cos(phi) + ks*cos^n(theta') with 16 sets of values
     //returns the resulting parameters kd, ks and n, in that order in brdf
-
-    Eigen::RowVectorXd test1 = phi.row(0);
-    Eigen::RowVectorXd test2 = phi.row(18000);
-
+    Eigen::RowVectorXd test1 = I.row(0);
+    Eigen::RowVectorXd test2 = phi.row(0);
     Eigen::RowVectorXd test3 = theta.row(0);
-    Eigen::RowVectorXd test4 = theta.row(18000);
-
-    Eigen::RowVectorXd test5 = thetaDash.row(0);
-    Eigen::RowVectorXd test6 = thetaDash.row(18000);
-
-    Eigen::RowVectorXd test7 = I.row(0);
-    Eigen::RowVectorXd test8 = I.row(18000);
+    Eigen::RowVectorXd test4 = thetaDash.row(0);
 
     double p[3] = {0.0, 0.0, 0.0};
     //double p[3] = {1.1, 0.65, 0.2};
-    double x[m_numImages*m_faces.rows()];
+    double* x = new double[m_numImages*m_faces.rows()];
     extraData* data = new extraData();
     data->angles = new double[3*m_numImages*m_faces.rows()];
 
@@ -933,6 +942,10 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Ei
     {
         for(int j=0; j<m_numImages; j++)
         {
+            auto testI = I(i,j);
+//            auto testPhi = phi(i,j);
+//            auto testTheta = theta(i,j);
+//            auto testThetaDash = thetaDash(i,j);
             x[i*m_numImages+j] = I(i,j);
 //            data->angles[i*m_numImages+j] = phi(i,j);
 //            data->angles[m_numImages*m_faces.rows() + i*m_numImages+j] = thetaDash(i,j);
@@ -940,34 +953,25 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Ei
         }
     }
 
-//    for(int i=0; i<m_faces.rows(); i++)
+//    for(int i=0; i < m_numImages*m_faces.rows(); ++i)
 //    {
-//        for(int j=0; j<m_numImages; j++)
-//        {
-//            data->angles[i*m_numImages+j] = phi(i,j);
-//        }
+//        x[i] = I(i);
 //    }
 
     int j = 0;
     for(; j<m_numImages*m_faces.rows(); j++)
     {
         data->angles[j] = phi(j);
-        auto test = phi(j);
-        double fake_test = 1.0;
     }
 
     for(int a=0; j<m_numImages*m_faces.rows()*2; j++, a++)
     {
         data->angles[j] = thetaDash(a);
-        auto test = thetaDash(a);
-        double fake_test = 1.0;
     }
 
     for(int a=0; j<m_numImages*m_faces.rows()*3; j++, a++)
     {
         data->angles[j] = theta(a);
-        auto test = theta(a);
-        double fake_test = 1.0;
     }
 
     data->modelInfo = m_model;
@@ -981,7 +985,7 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Ei
     double upper[] = {100,100,100};
 
     /* optimization control parameters; passing to levmar NULL instead of opts reverts to defaults */
-    opts[0]=LM_INIT_MU; opts[1]=1E-15; opts[2]=1E-15; opts[3]=1E-50;
+    opts[0]=LM_INIT_MU; opts[1]=1E-15; opts[2]=1E-10; opts[3]=1E-50;
     opts[4]=1; // relevant only if the finite difference Jacobian version is used
 
     int error = dlevmar_bc_dif(BRDFFunc, p, x, m, n, lower, upper, NULL, itmax, opts, info, NULL, NULL, data);
@@ -998,6 +1002,7 @@ cv::Mat CBRDFdata::SolveEquation_SingleBRDF(const Eigen::MatrixXd &phi, const Ei
 
     delete[] data->angles;
     delete data;
+    delete[] x;
 
     return brdf;
 }
@@ -1021,20 +1026,13 @@ cv::Mat CBRDFdata::SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thet
     extraData* data = new extraData();
 
     data->angles = new double[phi.cols() + thetaDash.cols() + theta.cols()];
-    int j = 0;
-    for(; j<m_numImages; j++)
-    {
-        data->angles[j] = phi(j);
-    }
 
-    for(int a=0; j<m_numImages*2; j++, a++)
+    for(int i=0; i<m_numImages; i++)
     {
-        data->angles[j] = thetaDash(a);
-    }
-
-    for(int a=0; j<m_numImages*3; j++, a++)
-    {
-        data->angles[j] = theta(a);
+        x[i] = I(i);
+        data->angles[i] = phi(i);
+        data->angles[m_numImages+i] = thetaDash(i);
+        data->angles[2+m_numImages+i] = theta(i);
     }
 
     data->modelInfo = m_model;
@@ -1065,6 +1063,7 @@ cv::Mat CBRDFdata::SolveEquation(Eigen::RowVectorXd phi, Eigen::RowVectorXd thet
 
     delete[] data->angles;
     delete data;
+    delete[] x;
 
     return brdf;
 }
