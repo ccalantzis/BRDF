@@ -39,8 +39,7 @@ bool CBRDFdata::LoadImages(std::string image_folder_path)
     {
         std::string path = image_folder_path + std::to_string(i) + extension;
 
-        cv::Mat newImg;
-        newImg = cv::imread(path);
+        cv::Mat newImg = cv::imread(path);
 
         if(newImg.empty())
         {
@@ -69,9 +68,9 @@ void CBRDFdata::PrintImages()
         char num[4];
         snprintf(num, sizeof(num), "%d", i+1);
         name += num;
-//        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
-//        cv::imshow(name.c_str(), (*it));
-//        cv::waitKey(0);
+        cv::namedWindow(name.c_str(), cv::WINDOW_AUTOSIZE);
+        cv::imshow(name.c_str(), (*it));
+        cv::waitKey(0);
     }
 }
 
@@ -127,8 +126,13 @@ bool CBRDFdata::LoadDarkImage(std::string image_folder_path)
 
 void CBRDFdata::SubtractAmbientLight(std::string image_folder_path)
 {
-    if(m_dark.dims == 0)
+    bool success = LoadDarkImage(image_folder_path);
+
+    if(!success)
+    {
+        std::cout << "Could not subtract ambient light\n";
         return;
+    }
 
     for(std::vector<cv::Mat>::iterator it = m_images.begin(); it != m_images.end(); it++)
     {
@@ -150,7 +154,6 @@ bool CBRDFdata::LoadCameraParameters(std::string filename)
         return false;
     }
 
-    int i=0;
     for(std::vector<char>::iterator it = buffer.begin(); it != buffer.end() && (*it != NULL); ++it)
     {
         char curr = *it;
@@ -266,22 +269,17 @@ bool CBRDFdata::ReadInFile(std::string filename, std::vector<char>* buffer)
 
 void CBRDFdata::ScaleMesh()
 {
-    Eigen::RowVector3d max_vertex = m_vertices.colwise().maxCoeff();
-    Eigen::RowVector3d min_vertex = m_vertices.colwise().minCoeff();
-
-    double diffX = std::abs(max_vertex(0) - min_vertex(0));
-    double diffY = std::abs(max_vertex(1) - min_vertex(1));
-    double diffZ = std::abs(max_vertex(2) - min_vertex(2));
+    Eigen::RowVector3d diff = (m_vertices.colwise().maxCoeff() - m_vertices.colwise().minCoeff());
 
     //in the original code they used 10. But they weren't calculating the min and max values correctly.
-    //the min might not be less than 0, guys. and on that note, the max might not be greater than 0.
+    //the min might not be less than 0 and the max might not be greater than 0.
     double scaleFactor = 0.0;
     //double maxDiff = std::max(diffX, diffY);
     scaleFactor = 8.65;
 
-    m_vertices.col(0) /= diffX;
-    m_vertices.col(1) /= diffY;
-    m_vertices.col(2) /= diffZ;
+    m_vertices.col(0) /= diff(0);
+    m_vertices.col(1) /= diff(1);
+    m_vertices.col(2) /= diff(2);
     m_vertices *= scaleFactor;
 }
 

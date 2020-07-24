@@ -43,13 +43,10 @@ int main(int argc, char** argv)
 	m_brdf.m_model = 1; //0: Phong, 1: Blinn-Phong
 
 	//read in 16 images
-	//assuming images are named 1.jpg to 16.jpg
     code = m_brdf.LoadImages(image_folder_path);
     if(!code) return -1;
-    m_brdf.PrintImages();
-    m_brdf.LoadDarkImage(image_folder_path);
-    //subtract ambient light is a bit broken
-    //m_brdf.SubtractAmbientLight(image_folder_path); //not really important, but correct
+    //m_brdf.PrintImages();
+    m_brdf.SubtractAmbientLight(image_folder_path); //not really important, but correct
 
 	//optional output
 	//m_brdf.PrintNormalisedImages();
@@ -63,8 +60,6 @@ int main(int argc, char** argv)
 	//render model
     std::cout << "begin rendering" << '\n';
     Render(&m_brdf, argc, argv);
-
-	//cvWaitKey(0);
 
     return 0;
 }
