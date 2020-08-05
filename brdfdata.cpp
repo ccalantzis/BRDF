@@ -17,6 +17,7 @@
 #include <igl/barycentric_coordinates.h>
 #include <fstream>
 #include <Eigen/Dense>
+
 #include <limits>
 #include <vector>
 #include <igl/point_mesh_squared_distance.h>
@@ -33,7 +34,8 @@
 bool CBRDFdata::LoadImages(std::string image_folder_path)
 {
     m_images.clear();
-    std::string extension = ".png";
+    //std::string extension = ".png";
+    std::string extension = ".jpeg";
 
     for(int i=1; i<=m_numImages; i++)
     {
@@ -114,7 +116,8 @@ void CBRDFdata::PrintImages()
 
 bool CBRDFdata::LoadDarkImage(std::string image_folder_path)
 {
-    std::string path = image_folder_path + "dark.png";
+    //std::string path = image_folder_path + "dark.png";
+    std::string path = image_folder_path + "dark.jpeg";
 
     m_dark = cv::imread(path, cv::IMREAD_COLOR);
 
@@ -295,7 +298,10 @@ bool CBRDFdata::LoadModel(std::string filename)
         return false;
     }
 
-    ScaleMesh();
+    //ScaleMesh();
+
+    std::cout << m_vertices << '\n';
+    std::cout << m_faces << '\n';
 
     face_normals = CalcFaceNormals(m_vertices, m_faces);
     vertex_normals = CalcVertexNormals(m_vertices, m_faces);
@@ -663,8 +669,8 @@ cv::Mat CBRDFdata::CalcPixel2SurfaceMapping()
 
         int errorValue = gluProject(objectX, objectY, objectZ, model_view, projection, viewport, &winX, &winY, &winZ);
 
-//        std::cout << "object: " << objectX << ", " << objectY << ", " << objectZ << '\n';
-//        std::cout << "window: " << winX << ", " << winY << ", " << winZ << '\n';
+        std::cout << "object: " << objectX << ", " << objectY << ", " << objectZ << '\n';
+        std::cout << "window: " << winX << ", " << winY << ", " << winZ << '\n';
 
         if(winY >=0 && winX >=0)
             map.at<int>(winY, winX) = i;
@@ -685,46 +691,108 @@ void CBRDFdata::InitLEDs()
 
     m_led.resize(m_numImages, 3);
 
-    for (int i = 0; i < m_numImages; i++)
-    {
-        //y coordinate
-        switch (i / 4)
-        {
-            case 0:
-                m_led(i,1) = 365.0 - 115.0;
-                break;
-            case 1:
-                m_led(i,1) = 260.0 - 115.0;
-                break;
-            case 2:
-                m_led(i,1) = 150.0 - 115.0;
-                break;
-            default:
-                m_led(i,1) = 45.0 - 115.0;
-                break;
-        }
+    double x = 303.5;
+    double min_y = -157.1;
+    double max_y = -2.3;
+    double min_z = 555.3;
+    double max_z = 645.8;
 
-        //x+z coordinates
-        switch (i % 4)
-        {
-        case 0:
-            m_led(i,0) = 305.0 * sin(6.0/33.0*CV_PI*0.5);
-            m_led(i,2) = 305.0 * cos(6.0/33.0*CV_PI*0.5);
-            break;
-        case 1:
-            m_led(i,0) = 305.0 * sin(13.0/33.0*CV_PI*0.5);
-            m_led(i,2) = 305.0 * cos(13.0/33.0*CV_PI*0.5);
-            break;
-        case 2:
-            m_led(i,0) = 305.0 * sin(20.0/33.0*CV_PI*0.5);
-            m_led(i,2) = 305.0 * cos(20.0/33.0*CV_PI*0.5);
-            break;
-        default:
-            m_led(i,0) = 305.0 * sin(27.0/33.0*CV_PI*0.5);
-            m_led(i,2) = 305.0 * cos(27.0/33.0*CV_PI*0.5);
-            break;
-        }
+    double y_step = (max_y - min_y)/3;
+    double z_step = (max_z - min_z)/3;
+
+    for(int i=0; i<16;i++)
+    {
+        m_led(i,0) = x;
     }
+
+    m_led(0,1) = max_y;
+    m_led(0,2) = min_z;
+
+    m_led(1,1) = max_y - y_step;
+    m_led(1,2) = min_z;
+
+    m_led(2,1) = min_y + y_step;
+    m_led(2,2) = min_z;
+
+    m_led(3,1) = min_y;
+    m_led(3,2) = min_z;
+
+    m_led(4,1) = min_y;
+    m_led(4,2) = min_z + z_step;
+
+    m_led(5,1) = min_y + y_step;
+    m_led(5,2) = min_z + z_step;
+
+    m_led(6,1) = max_y - y_step;
+    m_led(6,2) = min_z + z_step;
+
+    m_led(7,1) = max_y;
+    m_led(7,2) = min_z + z_step;
+
+    m_led(8,1) = max_y;
+    m_led(8,2) = max_z - z_step;
+
+    m_led(9,1) = max_y - y_step;
+    m_led(9,2) = max_z - z_step;
+
+    m_led(10,1) = min_y + y_step;
+    m_led(10,2) = max_z - z_step;
+
+    m_led(11,1) = min_y;
+    m_led(11,2) = max_z - z_step;
+
+    m_led(12,1) = min_y;
+    m_led(12,2) = max_z;
+
+    m_led(13,1) = min_y + y_step;
+    m_led(13,2) = max_z;
+
+    m_led(14,1) = max_y - y_step;
+    m_led(14,2) = max_z;
+
+    m_led(15,1) = max_y;
+    m_led(15,2) = max_z;
+
+//    for (int i = 0; i < m_numImages; i++)
+//    {
+//        //y coordinate
+//        switch (i / 4)
+//        {
+//            case 0:
+//                m_led(i,1) = 365.0 - 115.0;
+//                break;
+//            case 1:
+//                m_led(i,1) = 260.0 - 115.0;
+//                break;
+//            case 2:
+//                m_led(i,1) = 150.0 - 115.0;
+//                break;
+//            default:
+//                m_led(i,1) = 45.0 - 115.0;
+//                break;
+//        }
+
+//        //x+z coordinates
+//        switch (i % 4)
+//        {
+//        case 0:
+//            m_led(i,0) = 305.0 * sin(6.0/33.0*CV_PI*0.5);
+//            m_led(i,2) = 305.0 * cos(6.0/33.0*CV_PI*0.5);
+//            break;
+//        case 1:
+//            m_led(i,0) = 305.0 * sin(13.0/33.0*CV_PI*0.5);
+//            m_led(i,2) = 305.0 * cos(13.0/33.0*CV_PI*0.5);
+//            break;
+//        case 2:
+//            m_led(i,0) = 305.0 * sin(20.0/33.0*CV_PI*0.5);
+//            m_led(i,2) = 305.0 * cos(20.0/33.0*CV_PI*0.5);
+//            break;
+//        default:
+//            m_led(i,0) = 305.0 * sin(27.0/33.0*CV_PI*0.5);
+//            m_led(i,2) = 305.0 * cos(27.0/33.0*CV_PI*0.5);
+//            break;
+//        }
+//    }
 }
 
 Eigen::RowVectorXd CBRDFdata::GetCosRV(int currentSurface)

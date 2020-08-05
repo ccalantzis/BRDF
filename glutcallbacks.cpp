@@ -56,8 +56,10 @@ float m_stepLength = 1.0;
 
 float m_glFar = 1000.0f;
 double m_fps = 0.0;
-double m_glFov = 86;
-double m_glFovV = 73;
+//double m_glFov = 86;
+//double m_glFovV = 73;
+double m_glFov = 78;
+double m_glFovV = 49;
 
 GLuint m_meshListID = 0;
 
@@ -629,6 +631,7 @@ void MakeFrustum(double fovY, double aspectRatio, double front, double back)
     double offset_y = 2.0*(m_height/2.0 - cy)/ m_height;
     double offset_x = 2.0*(m_width/2.0  - cx)/ m_width;
     glFrustum(-width+offset_x, width+offset_x, -height-offset_y, height-offset_y, front, back);
+    //glFrustum(-width, width, -height, height, front, back);
 }
 
 

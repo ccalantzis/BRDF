@@ -19,8 +19,8 @@
 void Render(CBRDFdata* data, int argc, char** argv);
 
 CBRDFdata m_brdf;
-int m_width = 800;
-int m_height = 600;
+int m_width = 1920;
+int m_height = 1080;
 
 // main function
 int main(int argc, char** argv)
