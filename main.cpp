@@ -80,8 +80,8 @@ void Render(CBRDFdata* data, int argc, char** argv)
 	//let user rotate and translate around
 
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_MULTISAMPLE);
-    glutInitWindowPosition(1000, 100);
-	glutInitWindowSize(m_width, m_height);
+    glutInitWindowPosition(0, 0);
+    glutInitWindowSize(m_width, m_height);
 	glutInit(&argc, argv);
     glutCreateWindow("Scanned Mesh");
 

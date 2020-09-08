@@ -291,6 +291,7 @@ bool CBRDFdata::LoadModel(std::string filename)
 {
     //load 3d mesh from file
 
+
     bool success = igl::readOBJ(filename, m_vertices, m_faces);
     if(!success)
     {

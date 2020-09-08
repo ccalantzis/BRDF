@@ -505,9 +505,12 @@ void ResetCamera()
     if(!m_defaultView)
         return;
 
-    m_eyeX = m_brdf.GetCameraOrigin().at<double>(0, 0)/10.0;
-    m_eyeY = m_brdf.GetCameraOrigin().at<double>(0, 1)/10.0;
-    m_eyeZ = m_brdf.GetCameraOrigin().at<double>(0, 2)/10.0;
+//    m_eyeX = m_brdf.GetCameraOrigin().at<double>(0, 0)/10.0;
+//    m_eyeY = m_brdf.GetCameraOrigin().at<double>(0, 1)/10.0;
+//    m_eyeZ = m_brdf.GetCameraOrigin().at<double>(0, 2)/10.0;
+    m_eyeX = 0;
+    m_eyeY = 0;
+    m_eyeZ = 100;
 
     double ax = m_brdf.GetA().at<double>(0, 0);
     double ay = m_brdf.GetA().at<double>(0, 1);
@@ -518,6 +521,10 @@ void ResetCamera()
     m_centerX = m_eyeX - s*ax;
     m_centerY = m_eyeY - s*ay;
     m_centerZ = 0.0;
+
+    m_centerX = 0;
+    m_centerY = 0;
+    m_centerZ = 0;
 }
 
 void DrawOnScreenDisplay()
@@ -677,7 +684,9 @@ void Display_(void)
     double ox = m_brdf.GetO().at<double>(0, 0);
     double oy = m_brdf.GetO().at<double>(0, 1);
     double oz = m_brdf.GetO().at<double>(0, 2);
-    gluLookAt(m_eyeX, m_eyeY, m_eyeZ, m_centerX, m_centerY, m_centerZ, -ox, -oy, -oz);
+    //gluLookAt(m_eyeX, m_eyeY, m_eyeZ, m_centerX, m_centerY, m_centerZ, -ox, -oy, -oz);
+    //gluLookAt(m_eyeX, m_eyeY, m_eyeZ, m_centerX, m_centerY, m_centerZ, 0,1,0);
+    gluLookAt(0, 0, 50, 0, 0, 0, 0,1,0);
 
     //draw the scene
     DrawScene();

@@ -27,5 +27,4 @@ SOURCES += brdfdata.cpp
 SOURCES += glutcallbacks.cpp
 SOURCES += main.cpp
 
-linux:LIBS += -L $$OPENCV_LIB/ -l:libopencv_core.so.4.3 -L $$OPENCV_LIB/ -l:libopencv_imgproc.so.4.3 -L $$OPENCV_LIB/ -l:libopencv_imgcodecs.so.4.3 $$OPENCV_LIB/ -l:libopencv_highgui.so.4.3 -lGLU levmar/liblevmar.a -lstdc++ -lGL -lglut -lGLU -lopenblas -lpthread
-#linux:LIBS += `pkg-config --libs opencv` levmar/liblevmar.a -lstdc++ -lGL -lglut -lGLU -lopenblas -lpthread -lopencv_core -lopencv_imgproc -lopencv_highgui
+linux:LIBS += -I/usr/local/include/opencv4 -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -lGLU levmar/liblevmar.a -lstdc++ -lGL -lglut -lGLU -lopenblas -lpthread
